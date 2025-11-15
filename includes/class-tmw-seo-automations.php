@@ -4,6 +4,13 @@ if (!defined('ABSPATH')) exit;
 
 class Automations {
     const TAG = '[TMW-SEO-AUTO]';
+    /**
+     * Prevent duplicate runs that happen within the same request when
+     * both save_post and transition_post_status fire.
+     *
+     * @var array<int,bool>
+     */
+    protected static $request_locks = [];
 
     public static function boot() {
         add_action('save_post', [__CLASS__,'on_save'], 20, 3);
@@ -29,7 +36,10 @@ class Automations {
     }
 
     protected static function run(int $post_ID, string $source) {
-        if (get_transient('_tmwseo_running_'.$post_ID)) return; // debounce
+        if (!empty(self::$request_locks[$post_ID])) return; // double-hook debounce
+        if (get_transient('_tmwseo_running_'.$post_ID)) return; // cross-request debounce
+
+        self::$request_locks[$post_ID] = true;
         set_transient('_tmwseo_running_'.$post_ID, 1, 15);
 
         $res = Core::generate_for_video($post_ID, ['strategy'=>'template']);
@@ -40,5 +50,6 @@ class Automations {
         }
 
         delete_transient('_tmwseo_running_'.$post_ID);
+        unset(self::$request_locks[$post_ID]);
     }
 }
