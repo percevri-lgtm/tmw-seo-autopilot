@@ -8,6 +8,13 @@ if (!defined('ABSPATH')) {
 class Automations {
     const TAG = '[TMW-SEO-AUTO]';
 
+    /**
+     * Tracks posts currently undergoing generation to prevent reentrancy.
+     *
+     * @var array<int, bool>
+     */
+    private static $generating = [];
+
     public static function boot() {
         add_action('save_post', [__CLASS__, 'on_save'], 20, 3);
     }
@@ -22,10 +29,18 @@ class Automations {
         if (did_action('tmw_seo_generated_for_' . $post_ID)) {
             return;
         }
-        do_action('tmw_seo_pre_generate', $post_ID);
-        $res = Core::generate_for_video($post_ID, ['strategy' => 'template']);
-        do_action('tmw_seo_post_generate', $post_ID, $res);
-        error_log(self::TAG . " save_post video#$post_ID => " . json_encode(['ok' => $res['ok'] ?? false]));
-        do_action('tmw_seo_generated_for_' . $post_ID);
+        if (!empty(self::$generating[$post_ID])) {
+            return;
+        }
+        self::$generating[$post_ID] = true;
+        try {
+            do_action('tmw_seo_pre_generate', $post_ID);
+            $res = Core::generate_for_video($post_ID, ['strategy' => 'template']);
+            do_action('tmw_seo_post_generate', $post_ID, $res);
+            error_log(self::TAG . " save_post video#$post_ID => " . json_encode(['ok' => $res['ok'] ?? false]));
+            do_action('tmw_seo_generated_for_' . $post_ID);
+        } finally {
+            unset(self::$generating[$post_ID]);
+        }
     }
 }
