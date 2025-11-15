@@ -1,112 +1,68 @@
 <?php
 namespace TMW_SEO\Providers;
-
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
 
 class Template {
-    public function generate_video(array $c): array {
-        $name = $c['name'];
-        $hook = $c['hook'];
-        $site = $c['site'];
-        $num = 7;
-        $pos = 'Top';
-        $power = 'Must-See';
-        $title = sprintf('%s — %d %s %s %s', $name, $num, $pos, $power, ucwords($hook));
-        $meta = sprintf('%s collects %s in a clean, quick reel with a direct jump to live chat on %s. Photos, teasers, and schedule notes inside.',
-            $name, strtolower($hook), $site);
-        $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
-        $intro = sprintf('%s presents %d %s %s in a calm, polished reel that mirrors the pace of live chat.',
-            $name, $num, strtolower($pos), strtolower($hook));
-        $faq = [
-            ["When is {$name} usually online?", 'Most evenings with occasional weekend sessions; check profile notes.'],
-            ["What’s in this reel?", 'A compact sequence of color-forward chapters with smooth pacing.'],
-            ["How do I join live chat?", 'Use the “Join ' . $name . ' live chat” button on the page.'],
-            ["Is there more content?", 'Yes—visit the model profile for photos, schedule notes, and updates.'],
-        ];
-        $content = $this->html([
-            ['h2', 'Intro'],
-            ['p', $intro],
-            ['h2', 'Highlights'],
-            ['p', "$name uses steady light, clean frames, and color to guide the mood across seven short chapters."],
-            ['p', 'Each segment favors composition over effects, so the set stays rewatchable and device-friendly.'],
-            ['h2', 'Style & pacing'],
-            ['p', 'The video balances anticipation with resolution—no rush, no drag—so new viewers settle in fast.'],
-            ['h2', 'Why it works'],
-            ['p', 'Simple structure, thoughtful color, and a consistent rhythm make this easy to enjoy.'],
-            ['h2', "$name — FAQ"],
-            ...$this->faq_html($faq),
-            ...$this->cta_blocks($name, $c['cta'] ?? '', 'video reel')
-        ]);
-        return ['title' => $title, 'meta' => $meta, 'keywords' => $keywords, 'content' => $content];
-    }
+    public function generate(array $ctx): array {
+        $name = $ctx['name'];
+        $site = $ctx['site'];
+        $primary = $ctx['primary'];
+        $looks = $ctx['looks'];
+        $looks_str = $looks ? implode(', ', $looks) : strtolower($primary);
 
-    public function generate_model(array $c): array {
-        $name = $c['name'];
-        $site = $c['site'];
-        $title = sprintf('%s — Live Chat & Profile', $name);
-        $meta = sprintf('%s on %s. Photos, schedule tips, and live chat links. Follow %s for updates and teasers.', $name, $site, $name);
-        $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
+        $title = sprintf('%s — Live Chat & %s', $name, ucfirst($primary));
+        $meta  = sprintf('Meet %s. Explore %s looks and join live chat on %s. Bio, photos, and links updated regularly.', $name, strtolower($primary), $site);
+        $focus = array_unique(array_filter([
+            "$name live chat",
+            $primary,
+            $site,
+        ]));
 
-        $intro = sprintf('%s brings confident, friendly energy to %s. Known for polished visuals and relaxed chat, they blend editorial styling with interactive live sessions.',
-            $name, $site);
-        $bio = [
-            "$name’s profile favors clean compositions and a smooth pace that makes chat feel personal.",
-            "Between sessions, expect short teasers and simple updates so you always know what’s next.",
-            "Want to catch $name live? Evenings are often best, with weekend pops when the schedule allows."
-        ];
-        $faq = [
-            ["About $name", "$name keeps the layout clean so you can find highlights, new posts, and live times quickly."],
-            ["How often is $name live?", "Most evenings; check the banner note for changes."],
-            ["How to support $name?", "Join live chat, bookmark the profile, and share favorite posts."],
-        ];
-        $content = $this->html([
-            ['h2', 'Intro'],
-            ['p', $intro],
-            ['h2', 'Bio'],
-            ['p', implode("\n\n", $bio)],
-            ['h2', "$name — FAQ"],
-            ...$this->faq_html($faq),
-            ...$this->cta_blocks($name, $c['cta'] ?? '', 'model profile')
-        ]);
-        return ['title' => $title, 'meta' => $meta, 'keywords' => $keywords, 'content' => $content];
-    }
-
-    protected function html(array $blocks): string {
-        $out = '';
-        foreach ($blocks as $b) {
-            [$tag, $txt] = $b;
-            if ($tag === 'p') {
-                $out .= '<p>' . esc_html($txt) . '</p>';
-            } elseif (in_array($tag, ['h2', 'h3'], true)) {
-                $out .= '<' . $tag . '>' . esc_html($txt) . '</' . $tag . '>';
-            } elseif ($tag === 'cta' && is_array($txt)) {
-                $label = esc_html($txt['label']);
-                $url = esc_url($txt['url']);
-                $out .= '<p class="tmwseo-cta"><a class="button button-primary" target="_blank" rel="sponsored noopener" href="' . $url . '">' . $label . '</a></p>';
+        // Optional internal link to the first available term
+        $link_html = '';
+        $taxes = ['post_tag','models','category'];
+        foreach ($taxes as $tax) {
+            if (!empty($looks[0]) && taxonomy_exists($tax)) {
+                $term = get_term_by('name', $looks[0], $tax);
+                if ($term && !is_wp_error($term)) {
+                    $url = get_term_link($term);
+                    if (!is_wp_error($url)) {
+                        $link_html = '<p>Browse more: <a href="' . esc_url($url) . '">' . esc_html($term->name) . '</a></p>';
+                        break;
+                    }
+                }
             }
         }
-        return $out;
-    }
 
-    protected function faq_html(array $rows): array {
-        $out = [];
-        foreach ($rows as $r) {
-            $out[] = ['h3', $r[0]];
-            $out[] = ['p', $r[1]];
-        }
-        return $out;
-    }
+        $intro = sprintf(
+            '%s brings confident, friendly energy to %s. Known for polished visuals and relaxed chat, they blend editorial styling with interactive live sessions. Favorite looks: %s.',
+            esc_html($name), esc_html($site), esc_html($looks_str)
+        );
 
-    protected function cta_blocks(string $name, string $url, string $context): array {
-        if (!$url) {
-            return [];
+        $bio = implode("\n\n", [
+            "$name’s profile favors clean compositions, rich color styling, and a smooth pace that makes chat feel personal.",
+            "Between sessions, expect short teasers and simple updates so you always know when something new is coming. Fans mention the consistent vibe and the way regulars get remembered.",
+            "Want to catch $name live? Evenings are often best, with weekend pops when the schedule allows. Bookmark the profile, enable notifications, and drop a hello when you arrive.",
+        ]);
+
+        $content  = '<h2>Intro</h2><p>' . esc_html($intro) . '</p>';
+        if ($link_html) $content .= $link_html;
+        $content .= '<h2>Bio</h2>' . wpautop(esc_html($bio));
+        $content .= '<h2>FAQ</h2>';
+        $faq = [
+            ['When is ' . $name . ' usually online?', 'Most evenings with occasional weekend sessions; check the banner note on the profile.'],
+            ['What content is on the page?', 'Teasers, favorite looks, schedule notes, and live chat links.'],
+            ['How do I support ' . $name . '?', 'Join live chat, bookmark the profile, and share favorite posts.'],
+        ];
+        foreach ($faq as [$q,$a]) {
+            $content .= '<h3>' . esc_html($q) . '</h3><p>' . esc_html($a) . '</p>';
         }
+
         return [
-            ['h2', sprintf('Join %s live', $name)],
-            ['p', sprintf('The button below opens %s’s %s in a new tab and uses a sponsored LiveJasmin invite link.', $name, $context)],
-            ['cta', ['label' => sprintf('Chat with %s now', $name), 'url' => $url]],
+            'title' => sanitize_text_field($title),
+            'meta' => sanitize_text_field($meta),
+            'focus' => array_map('sanitize_text_field', $focus),
+            'content' => wp_kses_post($content),
         ];
     }
 }
