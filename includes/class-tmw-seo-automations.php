@@ -7,6 +7,14 @@ if (!defined('ABSPATH')) {
 
 class Automations {
     const TAG = '[TMW-SEO-AUTO]';
+    /**
+     * Track posts currently being generated so nested save_post runs (triggered
+     * by wp_update_post inside Core::generate_for_video) can bail out before
+     * re-entering the generator.
+     *
+     * @var array<int, bool>
+     */
+    protected static $processing = [];
 
     public static function boot() {
         add_action('save_post', [__CLASS__, 'on_save'], 20, 3);
@@ -19,13 +27,18 @@ class Automations {
         if ($post->post_status !== 'publish') {
             return;
         }
-        if (did_action('tmw_seo_generated_for_' . $post_ID)) {
+        if (isset(self::$processing[$post_ID]) || did_action('tmw_seo_generated_for_' . $post_ID)) {
             return;
         }
-        do_action('tmw_seo_pre_generate', $post_ID);
-        $res = Core::generate_for_video($post_ID, ['strategy' => 'template']);
-        do_action('tmw_seo_post_generate', $post_ID, $res);
-        error_log(self::TAG . " save_post video#$post_ID => " . json_encode(['ok' => $res['ok'] ?? false]));
-        do_action('tmw_seo_generated_for_' . $post_ID);
+        self::$processing[$post_ID] = true;
+        try {
+            do_action('tmw_seo_pre_generate', $post_ID);
+            $res = Core::generate_for_video($post_ID, ['strategy' => 'template']);
+            do_action('tmw_seo_post_generate', $post_ID, $res);
+            error_log(self::TAG . " save_post video#$post_ID => " . json_encode(['ok' => $res['ok'] ?? false]));
+            do_action('tmw_seo_generated_for_' . $post_ID);
+        } finally {
+            unset(self::$processing[$post_ID]);
+        }
     }
 }
