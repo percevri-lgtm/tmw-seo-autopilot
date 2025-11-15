@@ -9,9 +9,32 @@ class Core {
     const VIDEO_PT = 'video';
 
     public static function video_post_types(): array {
-        $defaults = ['video', 'videos'];
-        $list = apply_filters('tmw_seo_video_post_types', $defaults);
-        return array_values(array_unique(array_filter($list)));
+        $opt = get_option('tmwseo_video_pts');
+        if (is_array($opt) && !empty($opt)) {
+            return array_values(array_unique(array_filter($opt)));
+        }
+        $guessed = self::guess_video_post_types();
+        update_option('tmwseo_video_pts', $guessed, false);
+        return $guessed;
+    }
+
+    public static function guess_video_post_types(): array {
+        $candidates = [];
+        foreach (['video', 'videos'] as $def) {
+            if (post_type_exists($def)) $candidates[] = $def;
+        }
+        global $wp_post_types;
+        if (is_array($wp_post_types)) {
+            foreach ($wp_post_types as $slug => $pt) {
+                if (empty($pt) || !is_object($pt) || !$pt->public || $pt->_builtin) continue;
+                $label = strtolower($pt->labels->name . ' ' . $pt->labels->singular_name . ' ' . $slug);
+                if (preg_match('#\b(video|videos|clip|clips|movie|movies)\b#', $label)) {
+                    $candidates[] = $slug;
+                }
+            }
+        }
+        $candidates = apply_filters('tmw_seo_video_post_types', $candidates);
+        return array_values(array_unique(array_filter($candidates)));
     }
 
     /** Defaults via constants (wp-config) or sane fallbacks */
@@ -132,15 +155,12 @@ class Core {
 
     /** Detect model name from meta/tax/title */
     public static function detect_model_name_from_video(\WP_Post $post): string {
-        // 0) explicit overrides / common meta keys
-        foreach ([
-            'tmwseo_model_name', 'awe_model_name', 'model_name', 'performer_name'
-        ] as $key) {
-            $val = trim((string) get_post_meta($post->ID, $key, true));
-            if ($val !== '') return $val;
+        // explicit overrides / common meta
+        foreach (['tmwseo_model_name', 'awe_model_name', 'model_name', 'performer_name'] as $k) {
+            $v = trim((string) get_post_meta($post->ID, $k, true));
+            if ($v !== '') return $v;
         }
-
-        // 1) taxonomy terms
+        // taxonomies
         foreach (['models', 'model', 'video_actors', 'actor', 'performer'] as $tax) {
             if (taxonomy_exists($tax)) {
                 $names = wp_get_post_terms($post->ID, $tax, ['fields' => 'names']);
@@ -150,30 +170,21 @@ class Core {
                 }
             }
         }
-
-        // 2) parse from title
+        // title patterns
         $t = wp_strip_all_tags($post->post_title);
-
-        // 2a) “with {Name} …”
         if (preg_match('/\bwith\s+([A-Z][\p{L}\']+(?:\s+[A-Z][\p{L}\']+){0,3})\b/u', $t, $m)) {
             return trim($m[1]);
         }
-
-        // 2b) split on em dash, en dash, hyphen, colon, pipe
         $parts = preg_split('/\s*[—–\-:\|]\s*/u', $t, 2);
         if (!empty($parts[0])) {
             $first = trim($parts[0]);
-            // strip “(… ) chat/video with ”
             $first = preg_replace('/^\s*(?:intimate|private|live)?\s*(?:chat|video|clip|session)?\s*with\s+/i', '', $first);
             $first = trim($first);
             if ($first !== '') return $first;
         }
-
-        // 3) last resort: Capitalised First + Last found anywhere
         if (preg_match('/\b([A-Z][\p{L}\']+\s+[A-Z][\p{L}\']+)\b/u', $t, $m2)) {
             return trim($m2[1]);
         }
-
         error_log(self::TAG . " abort: no model name for video#{$post->ID} title='{$t}'");
         return '';
     }

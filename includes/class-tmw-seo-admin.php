@@ -15,6 +15,7 @@ class Admin {
         add_action('admin_menu', [__CLASS__, 'tools_page']);
         add_action('save_post', [__CLASS__, 'save_video_metabox'], 10, 2);
         add_action('admin_post_tmwseo_generate_now', [__CLASS__, 'handle_generate_now']);
+        add_action('admin_post_tmwseo_save_settings', [__CLASS__, 'handle_save_settings']);
         add_action('admin_notices', [__CLASS__, 'admin_notice']);
     }
 
@@ -136,6 +137,19 @@ class Admin {
             $og = \TMW_SEO\Core::default_og();
             echo '<tr><th>Default OG image</th><td>' . ($og ? '<code>' . esc_url($og) . '</code>' : '<em>none</em>') . '</td></tr>';
             echo '</tbody></table>';
+            $pts = \TMW_SEO\Core::video_post_types();
+            $all = get_post_types(['public' => true], 'objects');
+            echo '<hr><h2>Video Post Types</h2>';
+            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+            wp_nonce_field('tmwseo_save_settings', 'tmwseo_settings_nonce');
+            echo '<input type="hidden" name="action" value="tmwseo_save_settings" />';
+            echo '<table class="widefat"><thead><tr><th>Use</th><th>Slug</th><th>Label</th></tr></thead><tbody>';
+            foreach ($all as $slug => $obj) {
+                $label = $obj->labels->name . ' (' . $obj->labels->singular_name . ')';
+                $checked = in_array($slug, $pts, true) ? 'checked' : '';
+                echo '<tr><td><input type="checkbox" name="tmwseo_video_pts[]" value="' . esc_attr($slug) . '" ' . $checked . '></td><td><code>' . esc_html($slug) . '</code></td><td>' . esc_html($label) . '</td></tr>';
+            }
+            echo '</tbody></table><p><button class="button button-primary">Save Video Post Types</button></p></form>';
             ?>
         </div>
         <?php
@@ -175,10 +189,20 @@ class Admin {
         exit;
     }
 
+    public static function handle_save_settings() {
+        if (!current_user_can('manage_options')) wp_die('No permission');
+        if (!isset($_POST['tmwseo_settings_nonce']) || !wp_verify_nonce($_POST['tmwseo_settings_nonce'], 'tmwseo_save_settings')) wp_die('Bad nonce');
+        $pts = isset($_POST['tmwseo_video_pts']) ? (array) $_POST['tmwseo_video_pts'] : [];
+        $pts = array_values(array_unique(array_map('sanitize_key', $pts)));
+        update_option('tmwseo_video_pts', $pts, false);
+        wp_safe_redirect(admin_url('tools.php?page=tmw-seo-autopilot&saved=1'));
+        exit;
+    }
+
     public static function admin_notice() {
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->post_type ?? '', \TMW_SEO\Core::video_post_types(), true)) return;
-        if ($screen->base !== 'post') return;
+        if (!$screen || $screen->base !== 'post') return;
+        if (!in_array($screen->post_type ?? '', \TMW_SEO\Core::video_post_types(), true)) return;
         $post_id = get_the_ID();
         if (!$post_id) return;
         $msg = get_post_meta($post_id, '_tmwseo_last_message', true);
