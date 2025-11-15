@@ -125,6 +125,14 @@ class Admin {
                 <hr>
                 <p>Optional OpenAI provider: define <code>OPENAI_API_KEY</code> in wp-config.php or set constant <code>TMW_SEO_OPENAI</code> with your key to enable.</p>
             </form>
+            <?php
+            echo '<hr><h2>Integration Settings (read-only)</h2><table class="widefat"><tbody>';
+            echo '<tr><th>Brand order</th><td>' . esc_html(implode(' → ', \TMW_SEO\Core::brand_order())) . '</td></tr>';
+            echo '<tr><th>SUBAFF pattern</th><td>' . esc_html(\TMW_SEO\Core::subaff_pattern()) . '</td></tr>';
+            $og = \TMW_SEO\Core::default_og();
+            echo '<tr><th>Default OG image</th><td>' . ($og ? '<code>' . esc_url($og) . '</code>' : '<em>none</em>') . '</td></tr>';
+            echo '</tbody></table>';
+            ?>
         </div>
         <?php
     }

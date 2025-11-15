@@ -5,88 +5,346 @@ if (!defined('ABSPATH')) exit;
 class Core {
     const TAG = '[TMW-SEO-GEN]';
     const POST_TYPE = 'model';
+    const MODEL_PT = 'model';
+    const VIDEO_PT = 'video';
 
+    /** Defaults via constants (wp-config) or sane fallbacks */
+    public static function brand_order(): array {
+        $order = defined('TMW_SEO_BRAND_ORDER') ? TMW_SEO_BRAND_ORDER : 'jasmin,myc,lpr,joy,lsa';
+        return array_values(array_filter(array_map('trim', explode(',', strtolower($order)))));
+    }
+
+    public static function subaff_pattern(): string {
+        return defined('TMW_SEO_SUBAFF_PATTERN') ? TMW_SEO_SUBAFF_PATTERN : '{slug}-{brand}-{postId}';
+    }
+
+    public static function default_og(): string {
+        return defined('TMW_SEO_DEFAULT_OG') ? TMW_SEO_DEFAULT_OG : '';
+    }
+
+    /** Public API */
+    public static function generate_for_video(int $video_id, array $args = []): array {
+        $args = wp_parse_args($args, [
+            'strategy' => 'template',
+        ]);
+        $post = get_post($video_id);
+        if (!$post || $post->post_type !== self::VIDEO_PT) {
+            return ['ok' => false, 'message' => 'Not a video'];
+        }
+
+        $name = self::detect_model_name_from_video($post);
+        if (!$name) {
+            return ['ok' => false, 'message' => 'No model name detected'];
+        }
+
+        $model_id = self::ensure_model_exists($name);
+        $ctx_video = self::build_ctx_video($video_id, $model_id, $name, $args);
+        $ctx_model = self::build_ctx_model($model_id, $name, array_merge($args, ['video_id' => $video_id]));
+
+        $provider = self::provider($args['strategy']);
+        $payload_video = $provider->generate_video($ctx_video);
+        $payload_model = $provider->generate_model($ctx_model);
+
+        self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
+        self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
+
+        self::link_video_to_model($video_id, $model_id);
+        self::link_model_to_video($model_id, $video_id);
+
+        error_log(self::TAG . " generated video#$video_id & model#$model_id for {$name}");
+        return ['ok' => true, 'video' => $payload_video, 'model' => $payload_model, 'model_id' => $model_id];
+    }
+
+    /** Manual model generation for admin / CLI compatibility */
     public static function generate_and_write(int $post_id, array $args = []): array {
         $args = wp_parse_args($args, [
             'strategy' => 'template',
             'insert_content' => true,
             'dry_run' => false,
         ]);
-
         $post = get_post($post_id);
-        if (!$post || $post->post_type !== self::POST_TYPE) {
+        if (!$post || $post->post_type !== self::MODEL_PT) {
             return ['ok' => false, 'message' => 'Invalid post or type'];
         }
-
-        $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        $tax_candidates = ['post_tag', 'models', 'category'];
-        $terms = [];
-        foreach ($tax_candidates as $tax) {
-            if (taxonomy_exists($tax)) {
-                $t = wp_get_post_terms($post_id, $tax, ['fields' => 'names']);
-                if (!is_wp_error($t)) $terms = array_merge($terms, $t);
-            }
-        }
-        $primary_tag = $terms ? $terms[0] : 'live chat';
-        $looks = array_slice($terms, 0, 3);
-
-        $provider = ($args['strategy'] === 'openai' && Providers\OpenAI::is_enabled())
-            ? new Providers\OpenAI()
-            : new Providers\Template();
-
-        $payload = $provider->generate([
-            'name' => $post->post_title,
-            'site' => $site,
-            'primary' => $primary_tag,
-            'looks' => $looks,
-        ]);
-
-        if (!is_array($payload) || empty($payload['title'])) {
+        $ctx = self::build_ctx_model($post_id, $post->post_title, $args);
+        $provider = self::provider($args['strategy']);
+        $payload = $provider->generate_model($ctx);
+        if (empty($payload['title'])) {
             return ['ok' => false, 'message' => 'Generator returned empty payload'];
         }
+        if ($args['dry_run']) {
+            return ['ok' => true, 'payload' => $payload, 'dry_run' => true];
+        }
+        self::write_all($post_id, $payload, 'MODEL', !empty($args['insert_content']), $ctx);
+        return ['ok' => true, 'payload' => $payload];
+    }
 
+    public static function rollback(int $post_id): array {
+        $post = get_post($post_id);
+        if (!$post) {
+            return ['ok' => false, 'message' => 'Post not found'];
+        }
+        $type = ($post->post_type === self::VIDEO_PT) ? 'VIDEO' : 'MODEL';
+        $prev = get_post_meta($post_id, "_tmwseo_prev_{$type}", true);
+        if (!$prev && $type === 'MODEL') {
+            $prev = get_post_meta($post_id, '_tmwseo_prev', true);
+        }
+        if (!$prev) {
+            return ['ok' => false, 'message' => 'No previous values stored'];
+        }
+        update_post_meta($post_id, 'rank_math_title', $prev['rank_math_title'] ?? '');
+        update_post_meta($post_id, 'rank_math_description', $prev['rank_math_description'] ?? '');
+        update_post_meta($post_id, 'rank_math_focus_keyword', $prev['rank_math_focus_keyword'] ?? '');
+        if (isset($prev['post_content'])) {
+            $start = "<!-- TMWSEO:{$type}:START -->";
+            $end = "<!-- TMWSEO:{$type}:END -->";
+            $clean = preg_replace("#{$start}.*?{$end}#s", '', $prev['post_content']);
+            wp_update_post(['ID' => $post_id, 'post_content' => $clean]);
+        }
+        delete_post_meta($post_id, "_tmwseo_prev_{$type}");
+        delete_post_meta($post_id, '_tmwseo_prev');
+        error_log(self::TAG . " rollback done for #$post_id");
+        return ['ok' => true];
+    }
+
+    /** Ensure Model exists by exact post_title; returns ID */
+    public static function ensure_model_exists(string $name): int {
+        $model = get_page_by_title($name, OBJECT, self::MODEL_PT);
+        if ($model) {
+            return (int) $model->ID;
+        }
+        $id = wp_insert_post([
+            'post_type' => self::MODEL_PT,
+            'post_status' => 'publish',
+            'post_title' => $name,
+            'post_content' => '',
+        ]);
+        error_log(self::TAG . " created model#$id for {$name}");
+        return (int) $id;
+    }
+
+    /** Detect model name from meta/tax/title */
+    public static function detect_model_name_from_video(\WP_Post $post): string {
+        $name = trim((string) get_post_meta($post->ID, 'awe_model_name', true));
+        if (!$name) {
+            foreach (['models', 'model'] as $tax) {
+                if (taxonomy_exists($tax)) {
+                    $names = wp_get_post_terms($post->ID, $tax, ['fields' => 'names']);
+                    if (!is_wp_error($names) && !empty($names)) {
+                        $name = (string) $names[0];
+                        break;
+                    }
+                }
+            }
+        }
+        if (!$name) {
+            $t = wp_strip_all_tags($post->post_title);
+            $parts = preg_split('/\s+—\s+|-+/', $t);
+            if (!empty($parts[0])) {
+                $name = trim($parts[0]);
+            }
+        }
+        return $name;
+    }
+
+    /** Build CTA (LiveJasmin first, with fallbacks) */
+    public static function affiliate_url(string $name, string $brand = '', int $post_id = 0, string $slug = ''): string {
+        $brands = self::brand_order();
+        if (!$brand) {
+            $brand = $brands[0] ?? 'jasmin';
+        }
+        $psid = defined('TMW_SEO_PSID') ? TMW_SEO_PSID : 'Topmodels4u';
+        $pstool = defined('TMW_SEO_PSTOOL') ? TMW_SEO_PSTOOL : '205_1';
+        $prog = defined('TMW_SEO_PSPROGRAM') ? TMW_SEO_PSPROGRAM : 'revs';
+        $handle = rawurlencode(preg_replace('/\s+/', '', $name));
+        $sub = self::build_subaff($post_id, $brand, $slug ?: sanitize_title($name));
+        return add_query_arg([
+            'siteId' => $brand,
+            'categoryName' => 'girl',
+            'pageName' => 'freechat',
+            'performerName' => $handle,
+            'prm[psid]' => $psid,
+            'prm[pstool]' => $pstool,
+            'prm[psprogram]' => $prog,
+            'prm[campaign_id]' => '',
+            'subAffId' => $sub,
+        ], 'https://ctwmsg.com/');
+    }
+
+    protected static function build_subaff(int $post_id, string $brand, string $slug): string {
+        $pattern = self::subaff_pattern();
+        $replacements = [
+            '{slug}' => $slug ?: 'video',
+            '{brand}' => $brand,
+            '{postId}' => (string) $post_id,
+            '{post_id}' => (string) $post_id,
+        ];
+        return strtr($pattern, $replacements);
+    }
+
+    /** Build contexts */
+    protected static function build_ctx_video(int $video_id, int $model_id, string $name, array $args): array {
+        $looks = self::first_looks($video_id);
+        $hook = $looks[0] ?? 'highlights';
+        $title = get_the_title($video_id);
+        $slug = basename(get_permalink($video_id));
+        $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $focus = sprintf('%s %s', $name, $hook);
+        $extras = self::pick_extras($name, $looks, ['highlights', 'reel', 'live chat']);
+        return [
+            'video_id' => $video_id,
+            'model_id' => $model_id,
+            'name' => $name,
+            'title' => $title,
+            'slug' => $slug,
+            'site' => $site,
+            'hook' => $hook,
+            'looks' => $looks,
+            'focus' => $focus,
+            'extras' => $extras,
+            'model_permalink' => get_permalink($model_id),
+            'video_permalink' => get_permalink($video_id),
+        ];
+    }
+
+    protected static function build_ctx_model(int $model_id, string $name, array $args): array {
+        $looks = self::first_looks($model_id);
+        $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $slug = basename(get_permalink($model_id));
+        $focus = $name;
+        $extras = self::pick_extras($name, $looks, ['live chat', 'profile', 'schedule']);
+        $video_id = (int) ($args['video_id'] ?? 0);
+        return [
+            'model_id' => $model_id,
+            'video_id' => $video_id,
+            'name' => $name,
+            'slug' => $slug,
+            'site' => $site,
+            'looks' => $looks,
+            'focus' => $focus,
+            'extras' => $extras,
+            'model_permalink' => get_permalink($model_id),
+            'video_permalink' => $video_id ? get_permalink($video_id) : '',
+        ];
+    }
+
+    public static function first_looks(int $post_id): array {
+        $out = [];
+        foreach (['video_tag', 'post_tag', 'models', 'category'] as $tax) {
+            if (!taxonomy_exists($tax)) {
+                continue;
+            }
+            $names = wp_get_post_terms($post_id, $tax, ['fields' => 'names']);
+            if (!is_wp_error($names)) {
+                $out = array_merge($out, $names);
+            }
+        }
+        return array_values(array_unique(array_filter($out)));
+    }
+
+    protected static function pick_extras(string $name, array $looks, array $defaults): array {
+        $choices = array_values(array_unique(array_merge($looks, $defaults)));
+        $extras = [];
+        foreach ($choices as $c) {
+            if (strtolower($c) === strtolower($name)) {
+                continue;
+            }
+            $extras[] = sprintf('%s %s', $name, trim($c));
+            if (count($extras) >= 4) {
+                break;
+            }
+        }
+        while (count($extras) < 4) {
+            $extras[] = $name . ' live chat';
+        }
+        return $extras;
+    }
+
+    /** Write RankMath + content; $type = MODEL|VIDEO */
+    protected static function write_all(int $post_id, array $payload, string $type, bool $update_content = true, array $ctx = []): void {
+        if (empty($payload['title'])) {
+            return;
+        }
+        $post = get_post($post_id);
+        if (!$post) {
+            return;
+        }
         $prev = [
             'rank_math_title' => get_post_meta($post_id, 'rank_math_title', true),
             'rank_math_description' => get_post_meta($post_id, 'rank_math_description', true),
             'rank_math_focus_keyword' => get_post_meta($post_id, 'rank_math_focus_keyword', true),
             'post_content' => $post->post_content,
         ];
-        update_post_meta($post_id, '_tmwseo_prev', $prev);
+        update_post_meta($post_id, "_tmwseo_prev_{$type}", $prev);
 
-        if (!$args['dry_run']) {
-            update_post_meta($post_id, 'rank_math_title', $payload['title']);
-            update_post_meta($post_id, 'rank_math_description', $payload['meta']);
-            update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $payload['focus']));
+        $keywords = $payload['keywords'] ?? ($payload['focus'] ?? []);
+        $keywords = array_map('sanitize_text_field', (array) $keywords);
 
-            if (!empty($args['insert_content']) && !empty($payload['content'])) {
-                $marker_start = "\n<!-- TMWSEO:START -->\n";
-                $marker_end   = "\n<!-- TMWSEO:END -->\n";
-                $new = $post->post_content;
+        update_post_meta($post_id, 'rank_math_title', sanitize_text_field($payload['title']));
+        update_post_meta($post_id, 'rank_math_description', sanitize_text_field($payload['meta'] ?? ''));
+        update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $keywords));
 
-                $new = preg_replace('/\n<!-- TMWSEO:START -->(.*?)<!-- TMWSEO:END -->\n/s', "\n", $new);
-
-                $new .= $marker_start . $payload['content'] . $marker_end;
-                wp_update_post(['ID' => $post_id, 'post_content' => $new]);
-            }
+        update_post_meta($post_id, 'rank_math_facebook_title', sanitize_text_field($payload['title']));
+        update_post_meta($post_id, 'rank_math_facebook_description', sanitize_text_field($payload['meta'] ?? ''));
+        update_post_meta($post_id, 'rank_math_twitter_title', sanitize_text_field($payload['title']));
+        update_post_meta($post_id, 'rank_math_twitter_description', sanitize_text_field($payload['meta'] ?? ''));
+        if (self::default_og()) {
+            update_post_meta($post_id, 'rank_math_facebook_image', esc_url_raw(self::default_og()));
+            update_post_meta($post_id, 'rank_math_twitter_image', esc_url_raw(self::default_og()));
         }
 
-        error_log(self::TAG . " wrote SEO for #$post_id ({$post->post_title})");
-        return ['ok' => true, 'payload' => $payload, 'prev' => $prev];
+        if ($update_content && !empty($payload['content'])) {
+            $block = wp_kses_post($payload['content']);
+            $block .= self::internal_links_block($ctx, $type);
+            $block .= self::cta_block($ctx, $post_id);
+
+            $start = "<!-- TMWSEO:{$type}:START -->";
+            $end = "<!-- TMWSEO:{$type}:END -->";
+            $content = $post->post_content ?: '';
+            $content = preg_replace("#{$start}.*?{$end}#s", '', $content);
+            $content .= "\n{$start}\n" . $block . "\n{$end}\n";
+            $content = preg_replace('#<h1>#i', '<h2>', $content);
+            $content = preg_replace('#</h1>#i', '</h2>', $content);
+            wp_update_post(['ID' => $post_id, 'post_content' => $content]);
+        }
     }
 
-    public static function rollback(int $post_id): array {
-        $prev = get_post_meta($post_id, '_tmwseo_prev', true);
-        if (!$prev) return ['ok' => false, 'message' => 'No previous values stored'];
-        update_post_meta($post_id, 'rank_math_title', $prev['rank_math_title']);
-        update_post_meta($post_id, 'rank_math_description', $prev['rank_math_description']);
-        update_post_meta($post_id, 'rank_math_focus_keyword', $prev['rank_math_focus_keyword']);
-
-        if (isset($prev['post_content'])) {
-            $clean = preg_replace('/\n<!-- TMWSEO:START -->(.*?)<!-- TMWSEO:END -->\n/s', "\n", $prev['post_content']);
-            wp_update_post(['ID' => $post_id, 'post_content' => $clean]);
+    protected static function cta_block(array $ctx, int $post_id): string {
+        $name = $ctx['name'] ?? get_the_title($post_id);
+        if (!$name) {
+            return '';
         }
-        delete_post_meta($post_id, '_tmwseo_prev');
-        error_log(self::TAG . " rollback done for #$post_id");
-        return ['ok' => true];
+        $brand = self::brand_order()[0] ?? 'jasmin';
+        $slug = $ctx['slug'] ?? basename(get_permalink($post_id));
+        $url = self::affiliate_url($name, $brand, $post_id, $slug);
+        $label = sprintf('Join %s live chat on %s', $name, ucfirst($brand));
+        return '<p class="tmwseo-cta"><a href="' . esc_url($url) . '" rel="sponsored noopener" target="_blank">' . esc_html($label) . '</a></p>';
+    }
+
+    protected static function internal_links_block(array $ctx, string $type): string {
+        $links = '';
+        if ($type === 'VIDEO' && !empty($ctx['model_permalink'])) {
+            $links .= '<p class="tmwseo-link-model"><a href="' . esc_url($ctx['model_permalink']) . '">View ' . esc_html($ctx['name']) . ' profile</a></p>';
+        }
+        if ($type === 'MODEL' && !empty($ctx['video_permalink'])) {
+            $links .= '<p class="tmwseo-link-video"><a href="' . esc_url($ctx['video_permalink']) . '">Watch the latest video</a></p>';
+        }
+        return $links;
+    }
+
+    /** Cross-links */
+    protected static function link_video_to_model(int $video_id, int $model_id): void {
+        update_post_meta($video_id, '_tmwseo_model_id', $model_id);
+    }
+
+    protected static function link_model_to_video(int $model_id, int $video_id): void {
+        update_post_meta($model_id, '_tmwseo_latest_video_id', $video_id);
+    }
+
+    protected static function provider(string $strategy) {
+        if ($strategy === 'openai' && Providers\OpenAI::is_enabled()) {
+            return new Providers\OpenAI();
+        }
+        return new Providers\Template();
     }
 }
