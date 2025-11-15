@@ -67,33 +67,50 @@ class Core {
             return ['ok' => false, 'message' => 'No model name detected'];
         }
 
+        $brand_slug = self::brand_order()[0] ?? 'jasmin';
         $model_id = self::ensure_model_exists($name);
         $ctx_video = self::build_ctx_video($video_id, $model_id, $name, $args);
         $ctx_model = self::build_ctx_model($model_id, $name, array_merge($args, ['video_id' => $video_id]));
+        $ctx_video['brand'] = $brand_slug;
+        $ctx_video['brand_url'] = self::affiliate_url($name, $brand_slug, $post->ID, $post->post_name);
+        $model_slug = $ctx_model['slug'] ?? get_post_field('post_name', $model_id);
+        $ctx_model['brand'] = $brand_slug;
+        $ctx_model['brand_url'] = self::affiliate_url($name, $brand_slug, $model_id, $model_slug);
 
         $provider = self::provider($args['strategy']);
         $payload_video = $provider->generate_video($ctx_video);
         $payload_model = $provider->generate_model($ctx_model);
 
-        self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
-        self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
+        self::write_all($video_id, $payload_video, 'VIDEO', false, $ctx_video);
+        self::write_all($model_id, $payload_model, 'MODEL', false, $ctx_model);
 
-        $brand_url = self::affiliate_url($name, '', $post->ID, $post->post_name);
-        $model_url = get_permalink($model_id);
-        $highlights_count = $ctx_video['highlights_count'] ?? 7;
+        $video_block = self::build_video_blocks([
+            'name' => $name,
+            'cta_url' => $ctx_video['brand_url'],
+        ]);
+        $video_block .= "\n" . self::internal_links_block($ctx_video, 'VIDEO') . "\n" . self::cta_block($ctx_video, $post->ID);
+        self::replace_generated_block($post->ID, 'VIDEO', $video_block);
+
+        $model_block = self::build_model_blocks([
+            'name' => $name,
+        ]);
+        $model_block .= "\n" . self::internal_links_block($ctx_model, 'MODEL') . "\n" . self::cta_block($ctx_model, $model_id);
+        self::replace_generated_block($model_id, 'MODEL', $model_block);
+
         $rm_video = self::compose_rankmath_for_video($post, [
             'name' => $name,
-            'slug' => $post->post_name,
-            'brand_url' => $brand_url,
-            'model_url' => $model_url,
-            'highlights_count' => $highlights_count,
+            'brand' => $brand_slug,
         ]);
         self::update_rankmath_meta($post->ID, $rm_video);
 
         $rm_model = self::compose_rankmath_for_model(get_post($model_id), [
             'name' => $name,
+            'brand' => $brand_slug,
         ]);
         self::update_rankmath_meta($model_id, $rm_model);
+
+        self::fill_image_meta_for_post($post->ID, $name);
+        self::fill_image_meta_for_post($model_id, $name);
 
         self::link_video_to_model($video_id, $model_id);
         self::link_model_to_video($model_id, $video_id);
@@ -122,12 +139,25 @@ class Core {
         if ($args['dry_run']) {
             return ['ok' => true, 'payload' => $payload, 'dry_run' => true];
         }
-        self::write_all($post_id, $payload, 'MODEL', !empty($args['insert_content']), $ctx);
+        self::write_all($post_id, $payload, 'MODEL', false, $ctx);
+        $brand_slug = self::brand_order()[0] ?? 'jasmin';
+        $ctx['brand'] = $brand_slug;
+        $ctx['brand_url'] = self::affiliate_url($post->post_title, $brand_slug, $post_id, $ctx['slug'] ?? $post->post_name);
+
+        if (!empty($args['insert_content'])) {
+            $block = self::build_model_blocks([
+                'name' => $post->post_title,
+            ]);
+            $block .= "\n" . self::internal_links_block($ctx, 'MODEL') . "\n" . self::cta_block($ctx, $post_id);
+            self::replace_generated_block($post_id, 'MODEL', $block);
+        }
 
         $rm_model = self::compose_rankmath_for_model($post, [
             'name' => $post->post_title,
+            'brand' => $brand_slug,
         ]);
         self::update_rankmath_meta($post_id, $rm_model);
+        self::fill_image_meta_for_post($post_id, $post->post_title);
         return ['ok' => true, 'payload' => $payload];
     }
 
@@ -148,9 +178,8 @@ class Core {
         update_post_meta($post_id, 'rank_math_description', $prev['rank_math_description'] ?? '');
         update_post_meta($post_id, 'rank_math_focus_keyword', $prev['rank_math_focus_keyword'] ?? '');
         if (isset($prev['post_content'])) {
-            $start = "<!-- TMWSEO:{$type}:START -->";
-            $end = "<!-- TMWSEO:{$type}:END -->";
-            $clean = preg_replace("#{$start}.*?{$end}#s", '', $prev['post_content']);
+            $pattern = sprintf('#<!--\s*TMWSEO:%s(?:\s|:)START\s*-->.*?<!--\s*TMWSEO:%s(?:\s|:)END\s*-->#is', $type, $type);
+            $clean = preg_replace($pattern, '', $prev['post_content']);
             wp_update_post(['ID' => $post_id, 'post_content' => $clean]);
         }
         delete_post_meta($post_id, "_tmwseo_prev_{$type}");
@@ -330,6 +359,39 @@ class Core {
         return $extras;
     }
 
+    public static function build_video_blocks(array $ctx): string {
+        $name_raw = $ctx['name'] ?? '';
+        $name = esc_html($name_raw);
+        $intro = esc_html(sprintf('%s presents a confident reel that mirrors live chat energy.', $name_raw));
+        $cta_url = !empty($ctx['cta_url']) ? esc_url($ctx['cta_url']) : '';
+        $button_label = esc_html(sprintf('Join %s live', $name_raw));
+        $out = [];
+        $out[] = '<!-- wp:heading {"level":2} --><h2>' . $name . ' — Private Show</h2><!-- /wp:heading -->';
+        $out[] = '<!-- wp:paragraph --><p>' . $intro . '</p><!-- /wp:paragraph -->';
+        $out[] = '<!-- wp:heading {"level":3} --><h3>Highlights</h3><!-- /wp:heading -->';
+        $out[] = '<!-- wp:list --><ul><li>Live chat vibe</li><li>Quick teasers</li><li>Schedule notes</li></ul><!-- /wp:list -->';
+        $out[] = '<!-- wp:paragraph --><p>Explore more on the model page and jump into live chat when ready.</p><!-- /wp:paragraph -->';
+        if ($cta_url) {
+            $out[] = '<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button {"className":"is-style-fill"} --><div class="wp-block-button is-style-fill"><a class="wp-block-button__link" rel="sponsored nofollow noopener" target="_blank" href="' . $cta_url . '">' . $button_label . '</a></div><!-- /wp:button --></div><!-- /wp:buttons -->';
+        }
+        return implode("\n", $out);
+    }
+
+    public static function build_model_blocks(array $ctx): string {
+        $name_raw = $ctx['name'] ?? '';
+        $name = esc_html($name_raw);
+        $intro = esc_html($name_raw . ' brings confident, friendly energy to Top Models Webcam.');
+        $bio = esc_html($name_raw . ' keeps the profile streamlined so fans can jump from highlight reels to live chat in seconds.');
+        $out = [];
+        $out[] = '<!-- wp:heading {"level":2} --><h2>' . $name . '</h2><!-- /wp:heading -->';
+        $out[] = '<!-- wp:paragraph --><p>' . $intro . '</p><!-- /wp:paragraph -->';
+        $out[] = '<!-- wp:heading {"level":3} --><h3>Bio</h3><!-- /wp:heading -->';
+        $out[] = '<!-- wp:paragraph --><p>' . $bio . '</p><!-- /wp:paragraph -->';
+        $out[] = '<!-- wp:heading {"level":3} --><h3>FAQ</h3><!-- /wp:heading -->';
+        $out[] = '<!-- wp:list --><ul><li>Live chat times vary by day.</li><li>Updates posted after each session.</li></ul><!-- /wp:list -->';
+        return implode("\n", $out);
+    }
+
     /** Write RankMath + content; $type = MODEL|VIDEO */
     protected static function write_all(int $post_id, array $payload, string $type, bool $update_content = true, array $ctx = []): void {
         if (empty($payload['title'])) {
@@ -377,8 +439,22 @@ class Core {
             $content = preg_replace('#</h1>#i', '</h2>', $content);
             wp_update_post(['ID' => $post_id, 'post_content' => $content]);
         }
+    }
 
-        self::update_featured_image_meta($post_id, $ctx['name'] ?? $post->post_title);
+    protected static function replace_generated_block(int $post_id, string $type, string $block): void {
+        $post = get_post($post_id);
+        if (!$post) {
+            return;
+        }
+        $content = $post->post_content ?: '';
+        $pattern = sprintf('#<!--\s*TMWSEO:%s(?:\s|:)START\s*-->.*?<!--\s*TMWSEO:%s(?:\s|:)END\s*-->#is', $type, $type);
+        $content = preg_replace($pattern, '', $content);
+        $content = trim($content);
+        if ($content !== '') {
+            $content .= "\n\n";
+        }
+        $content .= sprintf("<!-- TMWSEO:%s START -->\n%s\n<!-- TMWSEO:%s END -->\n", $type, $block, $type);
+        wp_update_post(['ID' => $post_id, 'post_content' => $content]);
     }
 
     protected static function cta_block(array $ctx, int $post_id): string {
@@ -386,9 +462,9 @@ class Core {
         if (!$name) {
             return '';
         }
-        $brand = self::brand_order()[0] ?? 'jasmin';
+        $brand = $ctx['brand'] ?? (self::brand_order()[0] ?? 'jasmin');
         $slug = $ctx['slug'] ?? basename(get_permalink($post_id));
-        $url = self::affiliate_url($name, $brand, $post_id, $slug);
+        $url = !empty($ctx['brand_url']) ? $ctx['brand_url'] : self::affiliate_url($name, $brand, $post_id, $slug);
         $label = sprintf('Join %s live chat on %s', $name, ucfirst($brand));
         return '<p class="tmwseo-cta"><a href="' . esc_url($url) . '" rel="sponsored nofollow noopener" target="_blank">' . esc_html($label) . '</a></p>';
     }
@@ -410,22 +486,6 @@ class Core {
         return $links;
     }
 
-    protected static function update_featured_image_meta(int $post_id, string $name): void {
-        $thumb_id = (int) get_post_thumbnail_id($post_id);
-        if (!$thumb_id) {
-            return;
-        }
-        $alt = trim($name . ' live chat');
-        update_post_meta($thumb_id, '_wp_attachment_image_alt', $alt);
-        $attachment = [
-            'ID' => $thumb_id,
-            'post_title' => sanitize_text_field($name . ' — Featured'),
-            'post_excerpt' => sanitize_text_field($name . ' — Featured image for Top Models Webcam'),
-            'post_content' => sanitize_textarea_field($name . ' — Social/OG thumbnail'),
-        ];
-        wp_update_post($attachment);
-    }
-
     protected static function deep_link_url(string $type): string {
         if ($type === 'video') {
             foreach (self::video_post_types() as $pt) {
@@ -443,8 +503,59 @@ class Core {
         return home_url('/models/');
     }
 
+    public static function fill_image_meta_for_post(int $post_id, string $name): void {
+        $ids = [];
+        $tid = (int) get_post_thumbnail_id($post_id);
+        if ($tid) {
+            $ids[] = $tid;
+        }
+        $all = get_post_meta($post_id);
+        foreach ($all as $key => $vals) {
+            if (!preg_match('/(main|primary|poster).*(thumb|image|thumbnail)|awe.*thumb|main_thumbnail/i', $key)) {
+                continue;
+            }
+            foreach ((array) $vals as $v) {
+                if (is_array($v)) {
+                    $v = reset($v);
+                }
+                $id = absint($v);
+                if ($id) {
+                    $ids[] = $id;
+                }
+            }
+        }
+        $ids = array_unique(array_filter($ids));
+        foreach ($ids as $aid) {
+            if (get_post_type($aid) !== 'attachment') {
+                continue;
+            }
+            $alt = sanitize_text_field($name . ' live chat');
+            update_post_meta($aid, '_wp_attachment_image_alt', $alt);
+            wp_update_post([
+                'ID' => $aid,
+                'post_title' => sanitize_text_field($name . ' — Featured'),
+                'post_excerpt' => sanitize_text_field($name . ' — Featured image for Top Models Webcam'),
+                'post_content' => sanitize_textarea_field($name . ' — Social/OG thumbnail'),
+            ]);
+        }
+    }
+
+    protected static function power_word_for_brand(string $brand): string {
+        $enabled = get_option('tmwseo_brand_power', []);
+        $enabled = is_array($enabled) ? $enabled : [];
+        if (empty($enabled[$brand])) {
+            return '';
+        }
+        $map = get_option('tmwseo_brand_power_words', []);
+        $map = is_array($map) ? $map : [];
+        $word = $map[$brand] ?? 'Exclusive';
+        return sanitize_text_field($word);
+    }
+
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
+        $brand = $ctx['brand'] ?? 'jasmin';
+        $pw = trim(self::power_word_for_brand($brand));
         $focus = $name;
         $extras = [
             "$name live chat",
@@ -452,9 +563,9 @@ class Core {
             "$name profile",
             "$name schedule",
         ];
-        $num = $ctx['highlights_count'] ?? 7;
-        $title = "$name — $num Must-See Highlights (Private Show)";
-        $desc = "$name in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.";
+        $num = 7;
+        $title = $pw ? "$name — $pw $num Must-See Highlights" : "$name — $num Must-See Highlights";
+        $desc = "$name in a quick reel with a direct jump to live chat. Teasers, schedule tips, links on Top Models Webcam.";
 
         return [
             'focus' => $focus,
@@ -466,6 +577,8 @@ class Core {
 
     public static function compose_rankmath_for_model(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
+        $brand = $ctx['brand'] ?? 'jasmin';
+        $pw = trim(self::power_word_for_brand($brand));
         $focus = $name;
         $extras = [
             "$name live chat",
@@ -473,7 +586,7 @@ class Core {
             "$name photos",
             "$name schedule",
         ];
-        $title = "$name — Live Chat & Profile";
+        $title = $pw ? "$name — $pw Live Chat & Profile" : "$name — Live Chat & Profile";
         $desc = "$name on Top Models Webcam. Photos, schedule tips, and live chat links. Follow $name for updates and teasers.";
 
         return [
@@ -485,12 +598,19 @@ class Core {
     }
 
     public static function update_rankmath_meta(int $post_id, array $rm): void {
-        $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'])));
+        $focus = $rm['focus'] ?? '';
+        $extras = $rm['extras'] ?? [];
+        $kw = array_filter(array_map('trim', array_merge([$focus], $extras)));
+        $title = $rm['title'] ?? '';
+        $desc = $rm['desc'] ?? '';
         update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $kw));
-        update_post_meta($post_id, 'rank_math_title', $rm['title']);
-        update_post_meta($post_id, 'rank_math_description', $rm['desc']);
+        update_post_meta($post_id, 'rank_math_title', $title);
+        update_post_meta($post_id, 'rank_math_description', $desc);
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
-        error_log(self::TAG . " [RM] set focus='" . $rm['focus'] . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
+        update_post_meta($post_id, 'rank_math_facebook_title', $title);
+        update_post_meta($post_id, 'rank_math_facebook_description', $desc);
+        update_post_meta($post_id, 'rank_math_twitter_title', $title);
+        update_post_meta($post_id, 'rank_math_twitter_description', $desc);
     }
 
     /** Cross-links */
