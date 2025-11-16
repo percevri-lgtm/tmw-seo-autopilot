@@ -252,7 +252,9 @@ class Core {
         $title = get_the_title($video_id);
         $slug = basename(get_permalink($video_id));
         $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        $focus = sprintf('%s %s', $name, $hook);
+        // Use a short, unique focus for video pages so RankMath
+        // doesn't complain about duplicate focus keywords vs. model page.
+        $focus = sprintf('%s highlights', $name);
         $extras = self::pick_extras($name, $looks, ['highlights', 'reel', 'live chat']);
         return [
             'video_id' => $video_id,
@@ -444,42 +446,60 @@ class Core {
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
-        $focus = $name;
+        $num  = $ctx['highlights_count'] ?? 7;
+
+        // Focus keyword: unique to the video, not just the model name.
+        $focus = $name . ' highlights';
+
+        // Short, strong extra keywords (non-explicit, RankMath-friendly).
         $extras = [
-            "$name live chat",
-            "$name private show",
-            "$name profile",
-            "$name schedule",
+            $name . ' live cam',
+            $name . ' cam model',
+            $name . ' video highlights',
+            $name . ' webcam profile',
         ];
-        $num = $ctx['highlights_count'] ?? 7;
-        $title = "$name — $num Must-See Highlights (Private Show)";
-        $desc = "$name in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.";
+
+        // Title and description: short, positive, no explicit wording.
+        $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
+        $desc  = sprintf(
+            '%s in a short highlight reel with direct links to live chat and profile. Clips, timing notes, and schedule tips on Top Models Webcam.',
+            $name
+        );
 
         return [
-            'focus' => $focus,
+            'focus'  => $focus,
             'extras' => $extras,
-            'title' => $title,
-            'desc' => $desc,
+            'title'  => $title,
+            'desc'   => $desc,
         ];
     }
 
     public static function compose_rankmath_for_model(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
+
+        // Model page is the canonical entity page → focus is just the name.
         $focus = $name;
+
         $extras = [
-            "$name live chat",
-            "$name bio",
-            "$name photos",
-            "$name schedule",
+            $name . ' live cam model',
+            $name . ' profile',
+            $name . ' photos',
+            $name . ' schedule',
         ];
-        $title = "$name — Live Chat & Profile";
-        $desc = "$name on Top Models Webcam. Photos, schedule tips, and live chat links. Follow $name for updates and teasers.";
+
+        // Slightly richer title for better CTR, but still clean.
+        $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
+        $desc  = sprintf(
+            '%s on Top Models Webcam. Profile, photos, schedule tips, and live chat links. Follow %s for highlights, updates, and teasers.',
+            $name,
+            $name
+        );
 
         return [
-            'focus' => $focus,
+            'focus'  => $focus,
             'extras' => $extras,
-            'title' => $title,
-            'desc' => $desc,
+            'title'  => $title,
+            'desc'   => $desc,
         ];
     }
 

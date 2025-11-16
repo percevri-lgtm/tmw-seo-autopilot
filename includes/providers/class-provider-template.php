@@ -9,8 +9,8 @@ class Template {
         $hook = $c['hook'];
         $site = $c['site'];
         $num = 7;
-        $title = sprintf('%s — %d Must-See Highlights (Private Show)', $name, $num);
-        $meta = sprintf('%s in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.', $name);
+        $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
+        $meta  = sprintf('%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam.', $name);
         $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
 
         $lead = sprintf('%s opens this %s collection with two steady beats that feel like a guided tour instead of a teaser.', $name, strtolower($hook));
@@ -89,8 +89,8 @@ class Template {
     public function generate_model(array $c): array {
         $name = $c['name'];
         $site = $c['site'];
-        $title = sprintf('%s — Live Chat & Profile', $name);
-        $meta = sprintf('%s on %s. Photos, schedule tips, and live chat links. Follow %s for updates and teasers.', $name, $site, $name);
+        $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
+        $meta  = sprintf('%s on %s. Profile, photos, schedule tips, and live chat links. Follow %s for highlights and updates.', $name, $site, $name);
         $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
 
         $lead = sprintf('%s introduces this profile with a calm voiceover that outlines live chat themes and the personal touches fans notice first.', $name);
@@ -190,45 +190,17 @@ class Template {
     }
 
     protected function enforce_word_goal(string $content, string $focus, int $min = 900, int $max = 1200): string {
-        $words = str_word_count(wp_strip_all_tags($content));
-        if ($words >= $min && $words <= $max) {
-            return $content;
-        }
-        $extras = [
-            "$focus keeps refining transitions so every new release feels polished without losing spontaneity. The added structure highlights micro-expressions, light changes, and wardrobe details that would be lost in a shorter teaser, helping fans imagine the private room experience.",
-            "Fans mention that $focus writes thoughtful captions filled with scene notes, playlists, and gratitude for community members. Those longer updates turn the archive into a true journal, so scrolling back through the feed feels like reading a behind-the-scenes storyboard.",
-            "$focus rotates between cinematic color palettes and minimalist backdrops to keep the feed feeling fresh. That experimentation teaches viewers how lighting affects mood, and it reminds everyone that the next live show could surprise them with a brand-new creative direction.",
-        ];
-        $i = 0;
-        while ($words < $min && $i < 20) {
-            $addition = '<p>' . esc_html($extras[$i % count($extras)]) . '</p>';
-            $next_words = str_word_count(wp_strip_all_tags($content . $addition));
-            if ($next_words > $max) {
-                break;
-            }
-            $content .= $addition;
-            $words = $next_words;
-            $i++;
-        }
+        // New behavior: do not aggressively pad with repeated paragraphs.
+        // We accept whatever the base template produces.
         return $content;
     }
 
     protected function apply_density_guard(string $content, string $focus): string {
-        $count = substr_count(strtolower($content), strtolower($focus));
-        if ($count >= 8) {
-            return $content;
-        }
-        $extras = [
-            "$focus leans into natural pauses so each fan can breathe before the next reveal.",
-            "When scenes get intense, $focus steadies the camera to keep everything intentional.",
-            "$focus closes every update with gratitude, keeping the tone supportive and warm.",
-        ];
-        $i = 0;
-        while ($count < 8 && $i < 10) {
-            $content .= '<p>' . esc_html($extras[$i % count($extras)]) . '</p>';
-            $count++;
-            $i++;
-        }
+        // Old behavior: force at least 8 mentions of the focus keyword
+        // by appending more paragraphs with the name.
+        //
+        // New behavior: leave content as-is so keyword density stays lower
+        // and RankMath doesn't complain about over-optimization.
         return $content;
     }
 }
