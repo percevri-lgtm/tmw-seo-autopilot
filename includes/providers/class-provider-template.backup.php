@@ -8,51 +8,43 @@ class Template {
         $name = $c['name'];
         $hook = $c['hook'];
         $site = $c['site'];
-        $num = max(3, (int) ($c['highlights_count'] ?? 7));
+        $num = 7;
         $title = sprintf('%s — %d Must-See Highlights (Private Show)', $name, $num);
-        $meta = sprintf('%s trims %d scenes into a quick reel with direct links to live chat and the profile hub on %s.', $name, $num, $site);
+        $meta = sprintf('%s in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.', $name);
         $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
 
-        $lead = sprintf('%s frames this %s reel as a primer for %s visitors who want context before hitting the live button.', $name, strtolower($hook), $site);
-        $lead .= sprintf(' Each beat previews how %s escalates the private show and reminds viewers where to tap for live chat without missing a chapter.', $name);
+        $lead = sprintf('%s opens this %s collection with two steady beats that feel like a guided tour instead of a teaser.', $name, strtolower($hook));
+        $lead .= sprintf(' %s keeps the focus on confident posture and balanced breathing so the first cut already hints at what private show moments can become.', $name);
 
         $intro_paragraphs = [
-            "$name narrates what each scene represents so fans know which portion of the schedule they are watching and how the highlight connects to private rooms.",
-            "Camera changes are labeled on screen, and the notes reference the $site blog so returning viewers can track how the production evolves week to week.",
-            "The first minutes mention community cues, preferred emojis, and the moment $name usually signals that a surprise set is about to start.",
-            "$name also lists which teasers lead directly to the profile gallery for anyone who wants extra photos before committing to live chat.",
+            "$name anchors the introduction by narrating what each segment covers, from warm-up glances to the decisive pose that frames the transition into private shows.",
+            "With every new angle, $name explains where the reel connects to live chat, highlighting the cues that signal when an exclusive move is about to land.",
+            "Scheduling notes land early: evenings lean toward color-rich sets, late nights switch to monochrome silhouettes, and morning drops act as quick check-ins for fans before work.",
+            "$name also points to $site resources so viewers know where the teaser ends and the full live experience continues without confusion.",
         ];
 
         $highlight_paragraphs = [
-            sprintf('%s spends the early highlights on macro shots—hands, eyes, fabric—so the reel has texture before the pace increases.', $name),
-            sprintf('Chapters three through five show how %s mirrors the soundtrack, matching each transition to breathing patterns to avoid jump cuts.', $name),
-            sprintf('The final two highlights flip to POV angles and whispered CTAs that make the countdown to live chat unmistakable for anyone skimming.', $name),
-            sprintf('%s wraps the highlight pass with a reminder to keep push alerts on because pop-up sessions appear without warning.', $name),
+            "$name spends the first three highlights on tight camera work that shows fingertips, hair, and the soft glow of the set, proving that quiet detail can still feel cinematic.",
+            "Midway through, the soundtrack shifts to a mellow beat; $name syncs each gesture with that tempo so the viewer understands how the private show flow will feel.",
+            "Chapters six and seven turn into a direct invitation, mixing smiles, slow turns, and whispered prompts that make the countdown to live chat unmistakable.",
+            "$name rounds out the highlight reel with a practical reminder to keep notifications on, because pop-up sessions sometimes appear without warning.",
         ];
 
         $rhythm_paragraphs = [
-            "Every transition relies on soft dissolves so the reel feels like a single take even when the camera swaps sides mid-sentence.",
-            "$name keeps lighting palettes simple—cool for calm beats, warm when the reel leans into private show energy—so the mood shifts are obvious to new viewers.",
-            "$name rehearsed each sequence with a breath-count method so fans know exactly how the pacing inside a live room will feel.",
+            "Every transition uses a gentle dissolve so the energy never drops; even between scenes $name keeps eye contact with the camera to maintain momentum.",
+            "Lighting cues stay simple: a cool wash for calm beats, a warmer tone for crescendo moments, and subtle shadows whenever the reel needs intrigue.",
+            "$name rehearsed each chapter with a focus on breathing, so the pacing mirrors the kind of controlled confidence fans love in private rooms.",
         ];
 
         $prep_paragraphs = [
-            "$name suggests prepping playlists, setting room brightness to match the reel, and joining chat a minute early to catch any surprise openers.",
-            "Community shout-outs mention regulars who keep the vibe positive, encouraging newcomers to introduce themselves when they jump in.",
-            "After the highlights wrap, everyone is pointed back to the profile for wardrobe polls, studio notes, and archived teasers for reference.",
+            "To prep for live chat, $name recommends loading playlists, setting room lights to match the reel, and joining a minute before the posted schedule for surprise opener moves.",
+            "Community notes call out regulars who drop kind tips in chat; those shout-outs keep the vibe warm and encourage newcomers to say hello.",
+            "After the final highlight, $name points everyone back to the profile page for photos, wardrobe polls, and an archive of previous teasers that inspire the next session.",
         ];
-
-        $toc = $this->mini_toc([
-            '#intro' => 'Intro',
-            '#highlights' => 'Highlights',
-            '#rhythm' => 'Rhythm & Structure',
-            '#prep' => 'Live Chat Prep',
-            '#faq' => 'FAQ',
-        ]);
 
         $blocks = [
             ['p', $lead],
-            ['raw', $toc],
+            ['raw', $this->mini_toc()],
             ['h2', 'Intro', ['id' => 'intro']],
         ];
         foreach ($intro_paragraphs as $p) {
@@ -63,13 +55,13 @@ class Template {
             $blocks[] = ['p', $p];
         }
         if (!empty($c['model_url'])) {
-            $blocks[] = ['raw', '<p>Read more about ' . esc_html($name) . ' on the <a href="' . esc_url($c['model_url']) . '">full profile</a> for gallery links, wardrobe polls, and the latest notes.</p>'];
+            $blocks[] = ['raw', '<p>Read more about ' . esc_html($name) . ' on the <a href="' . esc_url($c['model_url']) . '">full profile</a> to see photos, notes, and schedule updates.</p>'];
         }
-        $blocks[] = ['h2', 'Rhythm & Structure', ['id' => 'rhythm']];
+        $blocks[] = ['h2', 'Rhythm & Structure'];
         foreach ($rhythm_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Live Chat Prep', ['id' => 'prep']];
+        $blocks[] = ['h2', 'Live Chat Prep'];
         foreach ($prep_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -78,8 +70,8 @@ class Template {
         }
 
         $faq = [
-            ["When is {$name} usually online?", 'Most evenings with occasional weekend sessions; check the banner for changes.'],
-            ["What’s in this reel?", 'A sequence of ' . $num . ' chapters mixing close-ups, pacing notes, and chat-ready cues.'],
+            ["When is {$name} usually online?", 'Most evenings with occasional weekend sessions; check profile notes.'],
+            ["What’s in this reel?", 'A sequence of seven chapters mixing close-ups, pacing notes, and chat-ready cues.'],
             ["How do I join live chat?", 'Use the “Join ' . $name . ' live chat” button or the inline link on this page.'],
             ["Is there more content?", 'Yes—visit the model profile for photos, schedule notes, wardrobe polls, and teasers.'],
         ];
@@ -101,12 +93,12 @@ class Template {
         $meta = sprintf('%s on %s. Photos, schedule tips, and live chat links. Follow %s for updates and teasers.', $name, $site, $name);
         $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
 
-        $lead = sprintf('%s opens the profile with a conversational summary that outlines live chat themes, favorite playlists, and how %s keeps regulars looped in.', $name, $name);
-        $lead .= sprintf(' The first paragraph feels like a DM so newcomers understand why the %s community keeps returning.', $site);
+        $lead = sprintf('%s introduces this profile with a calm voiceover that outlines live chat themes and the personal touches fans notice first.', $name);
+        $lead .= sprintf(' %s keeps things conversational so the first paragraph already feels like a friendly DM.', $name);
 
         $intro_paragraphs = [
             "$name mixes editorial-inspired photos with studio snapshots that show how the lighting changes between public and private rooms.",
-            "The intro also lists warm-up rituals, pre-show polls, and the subtle cues that signal when a surprise session might pop up.",
+            "The intro also lists favorite playlists, warm-up rituals, and the subtle cues that signal when a surprise session might pop up.",
             "$name emphasizes community guidelines that keep the profile welcoming, highlighting how respectful vibes lead to more adventurous shows.",
         ];
 
@@ -123,16 +115,9 @@ class Template {
             "A quick rundown of backstage routines—stretching, lighting tests, playlist swaps—helps fans appreciate the craft behind each live chat.",
         ];
 
-        $toc = $this->mini_toc([
-            '#intro' => 'Intro',
-            '#highlights' => 'Highlights',
-            '#community' => 'Community & Tips',
-            '#faq' => 'FAQ',
-        ]);
-
         $blocks = [
             ['p', $lead],
-            ['raw', $toc],
+            ['raw', $this->mini_toc()],
             ['h2', 'Intro', ['id' => 'intro']],
         ];
         foreach ($intro_paragraphs as $p) {
@@ -142,7 +127,7 @@ class Template {
         foreach ($highlight_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Community & Tips', ['id' => 'community']];
+        $blocks[] = ['h2', 'Community & Tips'];
         foreach ($community_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -198,56 +183,33 @@ class Template {
         return $out;
     }
 
-    protected function mini_toc(?array $sections = null): string {
-        if (empty($sections)) {
-            $sections = [
-                '#intro' => 'Intro',
-                '#highlights' => 'Highlights',
-                '#faq' => 'FAQ',
-            ];
-        }
-        $links = [];
-        foreach ($sections as $href => $label) {
-            $links[] = '<a href="' . esc_attr($href) . '">' . esc_html($label) . '</a>';
-        }
-        return '<nav class="tmw-mini-toc">' . implode(' · ', $links) . '</nav>';
+    protected function mini_toc(): string {
+        return '<nav class="tmw-mini-toc">
+  <a href="#intro">Intro</a> · <a href="#highlights">Highlights</a> · <a href="#faq">FAQ</a>
+</nav>';
     }
 
     protected function enforce_word_goal(string $content, string $focus, int $min = 900, int $max = 1200): string {
-        $content = trim($content);
         $words = str_word_count(wp_strip_all_tags($content));
-        if ($words < $min) {
-            $extras = [
-                "$focus keeps refining transitions so every new release feels polished without losing spontaneity. The added structure highlights micro-expressions, light changes, and wardrobe details that would be lost in a shorter teaser, helping fans imagine the private room experience.",
-                "Fans mention that $focus writes thoughtful captions filled with scene notes, playlists, and gratitude for community members. Those longer updates turn the archive into a true journal, so scrolling back through the feed feels like reading a behind-the-scenes storyboard.",
-                "$focus rotates between cinematic color palettes and minimalist backdrops to keep the feed feeling fresh. That experimentation teaches viewers how lighting affects mood, and it reminds everyone that the next live show could surprise them with a brand-new creative direction.",
-            ];
-            $i = 0;
-            while ($words < $min && $i < 20) {
-                $addition = '<p>' . esc_html($extras[$i % count($extras)]) . '</p>';
-                $next_words = str_word_count(wp_strip_all_tags($content . $addition));
-                if ($next_words > $max) {
-                    break;
-                }
-                $content .= $addition;
-                $words = $next_words;
-                $i++;
-            }
+        if ($words >= $min && $words <= $max) {
+            return $content;
         }
-
-        if ($words > $max) {
-            $pattern = '#(.*)(<p[^>]*>.*?</p>)\s*$#is';
-            $attempts = 0;
-            while ($words > $max && $attempts < 20 && preg_match($pattern, $content, $matches)) {
-                if (stripos($matches[2], 'tmwseo-inline-cta') !== false) {
-                    break;
-                }
-                $content = trim($matches[1]);
-                $words = str_word_count(wp_strip_all_tags($content));
-                $attempts++;
+        $extras = [
+            "$focus keeps refining transitions so every new release feels polished without losing spontaneity. The added structure highlights micro-expressions, light changes, and wardrobe details that would be lost in a shorter teaser, helping fans imagine the private room experience.",
+            "Fans mention that $focus writes thoughtful captions filled with scene notes, playlists, and gratitude for community members. Those longer updates turn the archive into a true journal, so scrolling back through the feed feels like reading a behind-the-scenes storyboard.",
+            "$focus rotates between cinematic color palettes and minimalist backdrops to keep the feed feeling fresh. That experimentation teaches viewers how lighting affects mood, and it reminds everyone that the next live show could surprise them with a brand-new creative direction.",
+        ];
+        $i = 0;
+        while ($words < $min && $i < 20) {
+            $addition = '<p>' . esc_html($extras[$i % count($extras)]) . '</p>';
+            $next_words = str_word_count(wp_strip_all_tags($content . $addition));
+            if ($next_words > $max) {
+                break;
             }
+            $content .= $addition;
+            $words = $next_words;
+            $i++;
         }
-
         return $content;
     }
 

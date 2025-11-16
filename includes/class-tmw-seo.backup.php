@@ -443,30 +443,22 @@ class Core {
     }
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
-        $name = trim($ctx['name']);
-        $num = max(3, (int) ($ctx['highlights_count'] ?? 7));
-        $focus = sprintf('%s video highlights', $name);
-        $slug_hint = !empty($ctx['slug']) ? str_replace('-', ' ', $ctx['slug']) : $name;
-        $extras = array_filter([
-            $name,
-            sprintf('%s live chat replay', $name),
-            sprintf('%s highlight reel', $slug_hint),
-            sprintf('%s private show preview', $name),
-            sprintf('%s schedule tips', $name),
-        ]);
-        $desc = sprintf(
-            '%1$s condenses %2$d quick beats into a tidy highlight reel with direct paths to live chat and the full profile.',
-            $name,
-            $num
-        );
-        if (!empty($ctx['brand_url']) || !empty($ctx['model_url'])) {
-            $desc .= ' Tap the live button or read the profile notes for context before jumping in.';
-        }
+        $name = $ctx['name'];
+        $focus = $name;
+        $extras = [
+            "$name live chat",
+            "$name private show",
+            "$name profile",
+            "$name schedule",
+        ];
+        $num = $ctx['highlights_count'] ?? 7;
+        $title = "$name — $num Must-See Highlights (Private Show)";
+        $desc = "$name in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.";
 
         return [
             'focus' => $focus,
             'extras' => $extras,
-            'title' => sprintf('%s — %d Must-See Highlights (Private Show)', $name, $num),
+            'title' => $title,
             'desc' => $desc,
         ];
     }
