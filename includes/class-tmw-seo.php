@@ -378,6 +378,8 @@ class Core {
         }
 
         self::update_featured_image_meta($post_id, $ctx['name'] ?? $post->post_title);
+        }
+    
     protected static function cta_block(array $ctx, int $post_id): string {
         $name = $ctx['name'] ?? get_the_title($post_id);
         if (!$name) {
