@@ -16,7 +16,6 @@ class Admin {
         add_action('save_post', [__CLASS__, 'save_video_metabox'], 10, 2);
         add_action('admin_post_tmwseo_generate_now', [__CLASS__, 'handle_generate_now']);
         add_action('admin_post_tmwseo_save_settings', [__CLASS__, 'handle_save_settings']);
-        add_action('admin_post_tmwseo_save_brand_power', [__CLASS__, 'handle_save_brand_power']);
         add_action('admin_notices', [__CLASS__, 'admin_notice']);
     }
 
@@ -151,21 +150,6 @@ class Admin {
                 echo '<tr><td><input type="checkbox" name="tmwseo_video_pts[]" value="' . esc_attr($slug) . '" ' . $checked . '></td><td><code>' . esc_html($slug) . '</code></td><td>' . esc_html($label) . '</td></tr>';
             }
             echo '</tbody></table><p><button class="button button-primary">Save Video Post Types</button></p></form>';
-
-            $brands = ['jasmin' => 'LiveJasmin', 'myc' => 'MyCams', 'lpr' => 'LivePrivates', 'joy' => 'Joyourself', 'lsa' => 'LSAwards'];
-            $opt = get_option('tmwseo_brand_power', []);
-            $words = get_option('tmwseo_brand_power_words', ['jasmin' => 'Exclusive', 'myc' => 'Official', 'lpr' => 'Exclusive', 'joy' => 'Official', 'lsa' => 'Award-Winning']);
-            echo '<hr><h2>Brand Power Words</h2>';
-            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-            wp_nonce_field('tmwseo_brand_power', 'tmwseo_brand_power_nonce');
-            echo '<input type="hidden" name="action" value="tmwseo_save_brand_power" />';
-            echo '<table class="widefat"><thead><tr><th>Use</th><th>Brand</th><th>Power Word</th></tr></thead><tbody>';
-            foreach ($brands as $k => $label) {
-                $checked = !empty($opt[$k]) ? 'checked' : '';
-                $val = isset($words[$k]) ? $words[$k] : 'Exclusive';
-                echo '<tr><td><input type="checkbox" name="use[' . esc_attr($k) . ']" ' . $checked . '></td><td>' . esc_html($label) . ' (' . esc_html($k) . ')</td><td><input type="text" name="word[' . esc_attr($k) . ']" value="' . esc_attr($val) . '" class="regular-text"></td></tr>';
-            }
-            echo '</tbody></table><p><button class="button button-primary">Save Power Word Settings</button></p></form>';
             ?>
         </div>
         <?php
@@ -211,19 +195,6 @@ class Admin {
         $pts = isset($_POST['tmwseo_video_pts']) ? (array) $_POST['tmwseo_video_pts'] : [];
         $pts = array_values(array_unique(array_map('sanitize_key', $pts)));
         update_option('tmwseo_video_pts', $pts, false);
-        wp_safe_redirect(admin_url('tools.php?page=tmw-seo-autopilot&saved=1'));
-        exit;
-    }
-
-    public static function handle_save_brand_power() {
-        if (!current_user_can('manage_options')) wp_die('No permission');
-        if (!isset($_POST['tmwseo_brand_power_nonce']) || !wp_verify_nonce($_POST['tmwseo_brand_power_nonce'], 'tmwseo_brand_power')) wp_die('Bad nonce');
-        $use_raw = isset($_POST['use']) ? (array) wp_unslash($_POST['use']) : [];
-        $word_raw = isset($_POST['word']) ? (array) wp_unslash($_POST['word']) : [];
-        $use = array_map('sanitize_text_field', $use_raw);
-        $word = array_map('sanitize_text_field', $word_raw);
-        update_option('tmwseo_brand_power', $use, false);
-        update_option('tmwseo_brand_power_words', $word, false);
         wp_safe_redirect(admin_url('tools.php?page=tmw-seo-autopilot&saved=1'));
         exit;
     }
