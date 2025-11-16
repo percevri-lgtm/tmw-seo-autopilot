@@ -200,8 +200,9 @@ class Template {
             "$focus rotates between cinematic color palettes and minimalist backdrops to keep the feed feeling fresh. That experimentation teaches viewers how lighting affects mood, and it reminds everyone that the next live show could surprise them with a brand-new creative direction.",
         ];
         $i = 0;
-        while ($words < $min && $i < 20) {
-            $addition = '<p>' . esc_html($extras[$i % count($extras)]) . '</p>';
+        $total = count($extras);
+        while ($words < $min && $i < $total) {
+            $addition = '<p>' . esc_html($extras[$i]) . '</p>';
             $next_words = str_word_count(wp_strip_all_tags($content . $addition));
             if ($next_words > $max) {
                 break;
