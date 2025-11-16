@@ -443,34 +443,23 @@ class Core {
     }
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
-        $name = trim($ctx['name']);
-        $hook = trim($ctx['hook'] ?? 'highlights');
-        $focus = trim($ctx['focus'] ?? sprintf('%s %s', $name, $hook));
-        $num = max(3, (int) ($ctx['highlights_count'] ?? 7));
-        $slug_hint = !empty($ctx['slug']) ? str_replace('-', ' ', $ctx['slug']) : $name;
-        $extras = array_filter([
-            sprintf('%s %s reel', $name, $hook),
-            sprintf('%s %s live chat', $name, $hook),
-            sprintf('%s %s profile', $name, $hook),
-            sprintf('%s %s schedule', $name, $hook),
-            sprintf('%s live chat', $name),
-            sprintf('%s profile', $name),
-            sprintf('%s schedule', $name),
-            sprintf('%s %s guide', $slug_hint, $hook),
-        ]);
-        $desc = sprintf(
-            '%1$s condenses %2$d quick beats into a tidy highlight reel with direct paths to live chat and the full profile.',
-            $name,
-            $num
-        );
-        if (!empty($ctx['brand_url']) || !empty($ctx['model_url'])) {
-            $desc .= ' Tap the live button or read the profile notes for context before jumping in.';
-        }
+        $name = $ctx['name'];
+        $hook = $ctx['hook'] ?? 'highlights';
+        $focus = sprintf('%s highlights', $name);
+        $extras = [
+            sprintf('%s highlights reel', $name),
+            sprintf('%s highlights live chat', $name),
+            sprintf('%s highlights profile', $name),
+            sprintf('%s highlights schedule', $name),
+        ];
+        $num = $ctx['highlights_count'] ?? 7;
+        $title = "$name — $num Must-See Highlights (Private Show)";
+        $desc = "$name in a clean, quick reel with a direct jump to live chat. Teasers, schedule tips, and links on Top Models Webcam.";
 
         return [
             'focus' => $focus,
             'extras' => $extras,
-            'title' => sprintf('%s — %d Must-See Highlights (Private Show)', $name, $num),
+            'title' => $title,
             'desc' => $desc,
         ];
     }
