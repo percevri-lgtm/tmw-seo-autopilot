@@ -444,13 +444,12 @@ class Core {
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
-        $hook = $ctx['hook'] ?? 'highlights';
-        $focus = sprintf('%s highlights', $name);
+        $focus = $name;
         $extras = [
-            sprintf('%s highlights reel', $name),
-            sprintf('%s highlights live chat', $name),
-            sprintf('%s highlights profile', $name),
-            sprintf('%s highlights schedule', $name),
+            "$name live chat",
+            "$name private show",
+            "$name profile",
+            "$name schedule",
         ];
         $num = $ctx['highlights_count'] ?? 7;
         $title = "$name — $num Must-See Highlights (Private Show)";
