@@ -8,7 +8,7 @@ class Template {
         $name = $c['name'];
         $hook = $c['hook'];
         $site = $c['site'];
-        $num = 7;
+        $num = $c['highlights_count'] ?? 7;
         $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
         $meta  = sprintf('%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam.', $name);
         $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
