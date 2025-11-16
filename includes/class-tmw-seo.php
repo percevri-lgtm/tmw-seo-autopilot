@@ -252,10 +252,15 @@ class Core {
         $title = get_the_title($video_id);
         $slug = basename(get_permalink($video_id));
         $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        // Use a short, unique focus for video pages so RankMath
-        // doesn't complain about duplicate focus keywords vs. model page.
-        $focus = sprintf('%s highlights', $name);
-        $extras = self::pick_extras($name, $looks, ['highlights', 'reel', 'live chat']);
+        // Use a distinct, non-duplicate focus for video pages so RankMath
+        // doesn't complain about matching the model page focus keyword.
+        $focus = sprintf('%s live cam highlights', $name);
+        $extras = [
+            $name . ' live cam',
+            $name . ' cam model',
+            $name . ' video highlights',
+            $name . ' webcam profile',
+        ];
         return [
             'video_id' => $video_id,
             'model_id' => $model_id,
@@ -449,7 +454,7 @@ class Core {
         $num  = $ctx['highlights_count'] ?? 7;
 
         // Focus keyword: unique to the video, not just the model name.
-        $focus = $name . ' highlights';
+        $focus = sprintf('%s live cam highlights', $name);
 
         // Short, strong extra keywords (non-explicit, RankMath-friendly).
         $extras = [
@@ -462,7 +467,7 @@ class Core {
         // Title and description: short, positive, no explicit wording.
         $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
         $desc  = sprintf(
-            '%s in a short highlight reel with direct links to live chat and profile. Clips, timing notes, and schedule tips on Top Models Webcam.',
+            '%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam. Quick preview with clean pacing and a hint of what to expect live.',
             $name
         );
 
@@ -490,7 +495,7 @@ class Core {
         // Slightly richer title for better CTR, but still clean.
         $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
         $desc  = sprintf(
-            '%s on Top Models Webcam. Profile, photos, schedule tips, and live chat links. Follow %s for highlights, updates, and teasers.',
+            '%s on Top Models Webcam. Profile, photos, schedule tips, and live chat links. Follow %s for highlights and updates.',
             $name,
             $name
         );
