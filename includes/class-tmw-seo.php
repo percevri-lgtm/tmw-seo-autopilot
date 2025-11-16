@@ -444,15 +444,19 @@ class Core {
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
         $name = trim($ctx['name']);
+        $hook = trim($ctx['hook'] ?? 'highlights');
+        $focus = trim($ctx['focus'] ?? sprintf('%s %s', $name, $hook));
         $num = max(3, (int) ($ctx['highlights_count'] ?? 7));
-        $focus = sprintf('%s video highlights', $name);
         $slug_hint = !empty($ctx['slug']) ? str_replace('-', ' ', $ctx['slug']) : $name;
         $extras = array_filter([
-            $name,
-            sprintf('%s live chat replay', $name),
-            sprintf('%s highlight reel', $slug_hint),
-            sprintf('%s private show preview', $name),
-            sprintf('%s schedule tips', $name),
+            sprintf('%s %s reel', $name, $hook),
+            sprintf('%s %s live chat', $name, $hook),
+            sprintf('%s %s profile', $name, $hook),
+            sprintf('%s %s schedule', $name, $hook),
+            sprintf('%s live chat', $name),
+            sprintf('%s profile', $name),
+            sprintf('%s schedule', $name),
+            sprintf('%s %s guide', $slug_hint, $hook),
         ]);
         $desc = sprintf(
             '%1$s condenses %2$d quick beats into a tidy highlight reel with direct paths to live chat and the full profile.',

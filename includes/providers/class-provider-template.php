@@ -42,34 +42,28 @@ class Template {
             "After the highlights wrap, everyone is pointed back to the profile for wardrobe polls, studio notes, and archived teasers for reference.",
         ];
 
-        $toc = $this->mini_toc([
-            '#intro' => 'Intro',
-            '#highlights' => 'Highlights',
-            '#rhythm' => 'Rhythm & Structure',
-            '#prep' => 'Live Chat Prep',
-            '#faq' => 'FAQ',
-        ]);
+        $toc = $this->mini_toc($name, $hook);
 
         $blocks = [
             ['p', $lead],
             ['raw', $toc],
-            ['h2', 'Intro', ['id' => 'intro']],
+            ['h2', sprintf('%s %s overview', $name, $hook), ['id' => 'intro']],
         ];
         foreach ($intro_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Highlights', ['id' => 'highlights']];
+        $blocks[] = ['h2', sprintf('%s highlights & key moments', $name), ['id' => 'highlights']];
         foreach ($highlight_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
         if (!empty($c['model_url'])) {
             $blocks[] = ['raw', '<p>Read more about ' . esc_html($name) . ' on the <a href="' . esc_url($c['model_url']) . '">full profile</a> for gallery links, wardrobe polls, and the latest notes.</p>'];
         }
-        $blocks[] = ['h2', 'Rhythm & Structure', ['id' => 'rhythm']];
+        $blocks[] = ['h2', sprintf('%s – rhythm & structure', $name), ['id' => 'rhythm']];
         foreach ($rhythm_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Live Chat Prep', ['id' => 'prep']];
+        $blocks[] = ['h2', sprintf('Live chat with %s – prep tips', $name), ['id' => 'prep']];
         foreach ($prep_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -123,26 +117,21 @@ class Template {
             "A quick rundown of backstage routines—stretching, lighting tests, playlist swaps—helps fans appreciate the craft behind each live chat.",
         ];
 
-        $toc = $this->mini_toc([
-            '#intro' => 'Intro',
-            '#highlights' => 'Highlights',
-            '#community' => 'Community & Tips',
-            '#faq' => 'FAQ',
-        ]);
+        $toc = $this->mini_toc($name);
 
         $blocks = [
             ['p', $lead],
             ['raw', $toc],
-            ['h2', 'Intro', ['id' => 'intro']],
+            ['h2', sprintf('About %s', $name), ['id' => 'intro']],
         ];
         foreach ($intro_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Highlights', ['id' => 'highlights']];
+        $blocks[] = ['h2', sprintf('%s highlights', $name), ['id' => 'highlights']];
         foreach ($highlight_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Community & Tips', ['id' => 'community']];
+        $blocks[] = ['h2', sprintf('%s community & tips', $name), ['id' => 'community']];
         foreach ($community_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -198,14 +187,12 @@ class Template {
         return $out;
     }
 
-    protected function mini_toc(?array $sections = null): string {
-        if (empty($sections)) {
-            $sections = [
-                '#intro' => 'Intro',
-                '#highlights' => 'Highlights',
-                '#faq' => 'FAQ',
-            ];
-        }
+    protected function mini_toc(string $name, string $hook = 'highlights'): string {
+        $sections = [
+            '#intro' => sprintf('About %s', $name),
+            '#highlights' => sprintf('%s %s', $name, $hook),
+            '#faq' => sprintf('%s FAQ', $name),
+        ];
         $links = [];
         foreach ($sections as $href => $label) {
             $links[] = '<a href="' . esc_attr($href) . '">' . esc_html($label) . '</a>';
@@ -218,9 +205,10 @@ class Template {
         $words = str_word_count(wp_strip_all_tags($content));
         if ($words < $min) {
             $extras = [
-                "$focus keeps refining transitions so every new release feels polished without losing spontaneity. The added structure highlights micro-expressions, light changes, and wardrobe details that would be lost in a shorter teaser, helping fans imagine the private room experience.",
-                "Fans mention that $focus writes thoughtful captions filled with scene notes, playlists, and gratitude for community members. Those longer updates turn the archive into a true journal, so scrolling back through the feed feels like reading a behind-the-scenes storyboard.",
-                "$focus rotates between cinematic color palettes and minimalist backdrops to keep the feed feeling fresh. That experimentation teaches viewers how lighting affects mood, and it reminds everyone that the next live show could surprise them with a brand-new creative direction.",
+                'Producers keep refining transitions so every release flows without abrupt jumps, giving space for reaction shots, lighting pivots, and subtle gestures to land.',
+                'Editors log how pacing affects mood, then annotate playlists, camera angles, and prop choices so the recap reads like a storyboard instead of a keyword dump.',
+                'Each drop weaves in notes about community feedback, showing how polls, chat transcripts, and fan mail quietly shape the rhythm of upcoming sessions.',
+                'Behind the scenes, the team tweaks color palettes, trims repetitive beats, and balances cozy language with direct instructions so updates feel conversational.',
             ];
             $i = 0;
             while ($words < $min && $i < 20) {
