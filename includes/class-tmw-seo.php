@@ -314,7 +314,7 @@ class Core {
 
     public static function first_looks(int $post_id): array {
         $out = [];
-        foreach (['video_tag', 'post_tag', 'models', 'category'] as $tax) {
+        foreach (['video_tag', 'post_tag', 'models', 'category', 'livejasmin_tag'] as $tax) {
             if (!taxonomy_exists($tax)) {
                 continue;
             }
@@ -639,28 +639,33 @@ class Core {
      * when available, from its latest linked video.
      */
     protected static function compute_model_extras( \WP_Post $post, array $ctx = [] ): array {
-        // Collect looks (tags/categories) from the model post.
+        // 1) Collect looks from model.
         $looks = self::first_looks( $post->ID );
 
-        // Also merge looks from the latest linked video, if present.
+        // 2) Also include looks from latest linked video, if any.
         $video_id = (int) get_post_meta( $post->ID, '_tmwseo_latest_video_id', true );
         if ( $video_id ) {
             $looks = array_merge( $looks, self::first_looks( $video_id ) );
         }
 
-        // De-duplicate raw tag names.
         $looks = array_values( array_unique( $looks ) );
 
-        // Build safe tag-based keywords.
+        // 3) Build keywords.
         $tag_keywords = self::safe_model_tag_keywords( $looks );
+        $generic      = self::model_random_extras( 4 );
 
-        // Generic soft adult keywords from the pool.
-        $generic = self::model_random_extras( 4 );
-
-        // Merge, de-duplicate, and limit to 4 extras.
         $all_extras = array_values( array_unique( array_merge( $tag_keywords, $generic ) ) );
+        $extras     = array_slice( $all_extras, 0, 4 );
 
-        return array_slice( $all_extras, 0, 4 );
+        // 4) Debug logging.
+        error_log( self::TAG . ' [MODEL-EXTRAS] post#' . $post->ID .
+            ' looks=' . json_encode( $looks ) .
+            ' tag_kw=' . json_encode( $tag_keywords ) .
+            ' generic=' . json_encode( $generic ) .
+            ' extras=' . json_encode( $extras )
+        );
+
+        return $extras;
     }
 
     public static function compose_rankmath_for_model( \WP_Post $post, array $ctx ): array {
