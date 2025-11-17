@@ -30,6 +30,12 @@ class Automations {
         if (get_transient('_tmwseo_running_'.$post_ID)) return; // debounce
         set_transient('_tmwseo_running_'.$post_ID, 1, 15);
 
+        $existing_focus = get_post_meta( $post_ID, 'rank_math_focus_keyword', true );
+        if ( ! empty( $existing_focus ) ) {
+            delete_transient('_tmwseo_running_'.$post_ID);
+            return;
+        }
+
         $res = Core::generate_for_video($post_ID, ['strategy'=>'template']);
         error_log(self::TAG." {$source} video#{$post_ID} => ".json_encode($res));
         if (is_admin()) {
