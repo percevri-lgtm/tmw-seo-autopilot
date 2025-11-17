@@ -523,12 +523,123 @@ class Core {
         return array_slice($pool, 0, $count);
     }
 
+    /**
+     * Build soft, non-explicit keywords from model tags.
+     * Only uses an allow-list of safe descriptive tags (hair, style, vibe, role, etc.).
+     */
+    protected static function safe_model_tag_keywords(array $looks): array {
+        if (empty($looks)) {
+            return [];
+        }
+
+        // Map lowercased tag names to generic, soft-adult keyword phrases.
+        $map = [
+            'amateur'           => 'amateur cam girl',
+            'asian'             => 'asian webcam model',
+            'athletic'          => 'athletic webcam model',
+            'auburn hair'       => 'auburn hair cam girl',
+            'bbw'               => 'curvy bbw webcam model',
+            'black hair'        => 'black hair webcam model',
+            'blonde'            => 'blonde cam girl',
+            'blond hair'        => 'blonde webcam model',
+            'blue eyes'         => 'blue eyed cam girl',
+            'brown eyes'        => 'brown eyed webcam model',
+            'brown hair'        => 'brunette webcam model',
+            'brunette'          => 'brunette cam girl',
+            'cam girl'          => 'cam girl live',
+            'cheerleader'       => 'cheerleader webcam model',
+            'college girl'      => 'college girl cam model',
+            'cosplay'           => 'cosplay webcam model',
+            'curious'           => 'curious cam girl',
+            'cute'              => 'cute cam girl',
+            'dance'             => 'dancing webcam model',
+            'ebony'             => 'ebony webcam model',
+            'eye contact'       => 'eye contact on cam',
+            'fire red hair'     => 'red hair cam model',
+            'glamour'           => 'glamour cam model',
+            'glasses'           => 'glasses webcam model',
+            'green eyes'        => 'green eyed webcam model',
+            'gym'               => 'fit gym cam girl',
+            'homemade'          => 'homemade style webcam show',
+            'hot'               => 'hot webcam model',
+            'hot flirt'         => 'hot flirt cam girl',
+            'housewife'         => 'housewife webcam model',
+            'innocent'          => 'innocent cam girl',
+            'jeans'             => 'jeans webcam show',
+            'kitchen'           => 'kitchen cam show',
+            'large build'       => 'curvy cam model',
+            'latex'             => 'latex outfit cam model',
+            'latin'             => 'latin webcam model',
+            'latina'            => 'latina cam girl',
+            'leather'           => 'leather outfit webcam model',
+            'lesbian'           => 'lesbian webcam model',
+            'lingerie'          => 'lingerie webcam model',
+            'long hair'         => 'long hair webcam girl',
+            'long nails'        => 'long nails cam girl',
+            'maid'              => 'maid roleplay cam',
+            'massage'           => 'massage webcam show',
+            'mature'            => 'mature cam model',
+            'milf'              => 'milf webcam model',
+            'muscular'          => 'muscular webcam model',
+            'nurse'             => 'nurse roleplay cam',
+            'nylon'             => 'nylon stockings cam model',
+            'office'            => 'office roleplay webcam',
+            'outdoor'           => 'outdoor webcam show',
+            'party'             => 'party webcam show',
+            'petite'            => 'petite cam girl',
+            'piercing'          => 'pierced webcam model',
+            'pink hair'         => 'pink hair cam girl',
+            'pool'              => 'poolside webcam show',
+            'princess'          => 'princess roleplay cam',
+            'public'            => 'public chat cam show',
+            'pvc'               => 'pvc outfit cam model',
+            'redhead'           => 'redhead cam girl',
+            'roleplay'          => 'roleplay webcam show',
+            'romantic'          => 'romantic cam model',
+            'secretary'         => 'secretary roleplay cam',
+            'sensual'           => 'sensual webcam show',
+            'sexy'              => 'sexy webcam model',
+            'short girl'        => 'short cam girl',
+            'short hair'        => 'short hair webcam model',
+            'shoulder lenght hair' => 'shoulder length hair cam girl',
+            'shy'               => 'shy webcam girl',
+            'skinny'            => 'slim webcam model',
+            'smoking'           => 'smoking cam girl',
+            'solo'              => 'solo webcam show',
+            'sologirl'          => 'solo girl webcam',
+            'stockings'         => 'stockings webcam model',
+            'striptease'        => 'striptease cam show',
+            'tall'              => 'tall webcam model',
+            'tattoo'            => 'tattooed cam girl',
+            'teacher'           => 'teacher roleplay webcam',
+            'teasing'           => 'teasing cam girl',
+            'uniform'           => 'uniform roleplay webcam',
+            'white'             => 'white webcam model',
+        ];
+
+        $keywords = [];
+        foreach ($looks as $raw) {
+            $key = strtolower(trim($raw));
+            if (isset($map[$key])) {
+                $keywords[] = $map[$key];
+            }
+        }
+
+        return array_values(array_unique($keywords));
+    }
+
     public static function compose_rankmath_for_model( \WP_Post $post, array $ctx ): array {
         $name  = $ctx['name'];
         $focus = $name; // focus keyword is ONLY the name
 
-        // Random soft adult extras for model pages
-        $extras = self::model_random_extras(4);
+        // Build extras from safe model tags + generic soft adult phrases.
+        $looks        = self::first_looks($post->ID);
+        $tag_keywords = self::safe_model_tag_keywords($looks);
+        $generic      = self::model_random_extras(4);
+
+        // Merge, de-duplicate, and limit to 4 extras.
+        $all_extras = array_values(array_unique(array_merge($tag_keywords, $generic)));
+        $extras     = array_slice($all_extras, 0, 4);
 
         $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
         $desc  = sprintf(
