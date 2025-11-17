@@ -657,14 +657,6 @@ class Core {
         $all_extras = array_values( array_unique( array_merge( $tag_keywords, $generic ) ) );
         $extras     = array_slice( $all_extras, 0, 4 );
 
-        // 4) Debug logging.
-        error_log( self::TAG . ' [MODEL-EXTRAS] post#' . $post->ID .
-            ' looks=' . json_encode( $looks ) .
-            ' tag_kw=' . json_encode( $tag_keywords ) .
-            ' generic=' . json_encode( $generic ) .
-            ' extras=' . json_encode( $extras )
-        );
-
         return $extras;
     }
 
@@ -672,8 +664,18 @@ class Core {
         $name  = $ctx['name'];
         $focus = $name; // focus keyword is ONLY the name
 
-        // Use the unified extras computation for model pages.
-        $extras = self::compute_model_extras( $post, $ctx );
+        $looks = self::first_looks( $post->ID );
+        $video_id = (int) get_post_meta( $post->ID, '_tmwseo_latest_video_id', true );
+        if ( $video_id > 0 ) {
+            $looks = array_merge( $looks, self::first_looks( $video_id ) );
+        }
+        $looks = array_values( array_unique( $looks ) );
+
+        $tag_keywords = self::safe_model_tag_keywords( $looks );
+        $generic      = self::model_random_extras( 4 );
+
+        $all_extras = array_values( array_unique( array_merge( $tag_keywords, $generic ) ) );
+        $extras     = array_slice( $all_extras, 0, 4 );
 
         if (class_exists(__NAMESPACE__ . '\\RankMath') && method_exists(RankMath::class, 'generate_model_snippet_title')) {
             $title = RankMath::generate_model_snippet_title($post);
@@ -686,6 +688,7 @@ class Core {
             $name
         );
 
+        error_log(self::TAG . " [MODEL-EXTRAS] post#{$post->ID} looks=" . json_encode($looks) . " tag_kw=" . json_encode($tag_keywords) . " generic=" . json_encode($generic) . " extras=" . json_encode($extras));
         error_log(self::TAG . " [RM-MODEL] focus='{$focus}' extras=" . json_encode($extras) . " for post#{$post->ID}");
 
         return [
