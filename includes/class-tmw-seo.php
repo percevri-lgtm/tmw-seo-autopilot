@@ -449,6 +449,54 @@ class Core {
         return home_url('/models/');
     }
 
+    /**
+     * Soft adult webcam keyword pool for model pages.
+     * These are non-explicit phrases used as secondary RankMath keywords.
+     */
+    protected static function model_extra_keyword_pool(): array {
+        return [
+            'adult webcams',
+            'adult web cams',
+            'adult webcam',
+            'adult webcam chat',
+            'adult cam',
+            'adult cam chat',
+            'adult live cams',
+            'adult live webcam',
+            'adult cam site',
+            'adult cam website',
+            'adult cam streaming',
+            'live cam model',
+            'live cam models',
+            'live webcam models',
+            'live webcam chat',
+            'live webcam streaming',
+            'live webcam girls',
+            'live cam girls',
+            'live cam girl',
+            'cam girl live',
+            'cam girls online',
+            'webcam girls live',
+            'webcam chat live',
+            'live cam show',
+            'live cam shows',
+            'live cam performers',
+            'live cam broadcast',
+            'live cam profiles',
+            'webcam model profile',
+            'cam model online',
+        ];
+    }
+
+    /**
+     * Pick a given number of unique extras from the pool, in random order.
+     */
+    protected static function model_random_extras(int $count = 4): array {
+        $pool = self::model_extra_keyword_pool();
+        shuffle($pool);
+        return array_slice($pool, 0, max(0, $count));
+    }
+
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
         $name = $ctx['name'];
         $num  = $ctx['highlights_count'] ?? 7;
@@ -483,12 +531,8 @@ class Core {
         $name  = $ctx['name'];
         $focus = $name; // focus keyword is ONLY the name
 
-        $extras = [
-            $name . ' live cam model',
-            $name . ' webcam profile',
-            $name . ' photos',
-            $name . ' schedule',
-        ];
+        // Random soft adult webcam secondary keywords for model pages.
+        $extras = self::model_random_extras(4);
 
         $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
         $desc  = sprintf(
