@@ -522,6 +522,10 @@ class Core {
     ];
 }
 
+    public static function get_model_extra_keyword_pool(): array {
+        return self::model_extra_keyword_pool();
+    }
+
     protected static function model_random_extras(int $count = 4): array {
         $pool = self::model_extra_keyword_pool();
         shuffle($pool);
@@ -631,6 +635,10 @@ class Core {
         }
 
         return array_values(array_unique($keywords));
+    }
+
+    public static function get_safe_model_tag_keywords(array $looks): array {
+        return self::safe_model_tag_keywords($looks);
     }
 
     /**
