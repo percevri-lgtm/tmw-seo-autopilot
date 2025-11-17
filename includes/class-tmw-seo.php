@@ -652,7 +652,11 @@ class Core {
         $all_extras = array_values(array_unique(array_merge($tag_keywords, $generic)));
         $extras     = array_slice($all_extras, 0, 4);
 
-        $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
+        if (class_exists(__NAMESPACE__ . '\\RankMath') && method_exists(RankMath::class, 'generate_model_snippet_title')) {
+            $title = RankMath::generate_model_snippet_title($post);
+        } else {
+            $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
+        }
         $desc  = sprintf(
             '%s on Top Models Webcam. Profile, photos, schedule tips, and live chat links. Follow %s for highlights and updates.',
             $name,
