@@ -89,6 +89,8 @@ class Core {
             ]
         );
 
+        self::maybe_update_video_title( $post, $rm_video['focus'] );
+
         $ctx_video['focus'] = $rm_video['focus'];
         if (!empty($rm_video['extras'])) {
             $ctx_video['extras'] = $rm_video['extras'];
@@ -785,6 +787,71 @@ class Core {
 
     protected static function is_old_video_description(string $desc, string $focus): bool {
         return stripos($desc, $focus) !== false && stripos($desc, 'quick reel') !== false;
+    }
+
+    public static function maybe_update_video_title( \WP_Post $post, string $focus ): void {
+        $focus = trim( $focus );
+        if ( $focus === '' ) {
+            return;
+        }
+
+        if ( ! in_array( $post->post_type, self::video_post_types(), true ) ) {
+            return;
+        }
+
+        if ( $post->post_status !== 'publish' ) {
+            return;
+        }
+
+        $post_id = $post->ID;
+
+        if ( get_post_meta( $post_id, '_tmwseo_video_title_locked', true ) ) {
+            return;
+        }
+
+        $existing_focus = trim( (string) get_post_meta( $post_id, 'rank_math_focus_keyword', true ) );
+        if ( $existing_focus !== '' ) {
+            return;
+        }
+
+        $fresh_post = get_post( $post_id );
+        if ( ! $fresh_post instanceof \WP_Post ) {
+            return;
+        }
+
+        $original_title = (string) $fresh_post->post_title;
+        $new_title      = $focus;
+
+        if ( $original_title !== '' ) {
+            if ( stripos( $original_title, $focus ) === 0 ) {
+                $new_title = $original_title;
+            } elseif ( stripos( $original_title, $focus ) === false ) {
+                $new_title = $focus . ' — ' . $original_title;
+            }
+        }
+
+        if ( $new_title !== $original_title ) {
+            wp_update_post(
+                [
+                    'ID'         => $post_id,
+                    'post_title' => sanitize_text_field( $new_title ),
+                ]
+            );
+        }
+
+        update_post_meta( $post_id, '_tmwseo_video_title_locked', 1 );
+
+        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
+            error_log(
+                sprintf(
+                    '%s [VIDEO TITLE] #%d old="%s" new="%s"',
+                    self::TAG,
+                    $post_id,
+                    $original_title,
+                    $new_title
+                )
+            );
+        }
     }
 
     public static function maybe_update_video_slug( \WP_Post $post, string $focus ): void {

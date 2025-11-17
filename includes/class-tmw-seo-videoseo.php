@@ -59,6 +59,8 @@ class VideoSEO {
             ]
         );
 
+        Core::maybe_update_video_title( $post, $rm['focus'] );
+
         Core::maybe_update_video_slug( $post, $rm['focus'] );
 
         Core::update_rankmath_meta( $post_id, $rm, true );
