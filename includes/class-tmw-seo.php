@@ -75,6 +75,11 @@ class Core {
         $payload_video = $provider->generate_video($ctx_video);
         $payload_model = $provider->generate_model($ctx_model);
 
+        $rm_model = self::compose_rankmath_for_model(get_post($model_id), [
+            'name' => $name,
+        ]);
+        $payload_model['keywords'] = array_merge([$rm_model['focus']], $rm_model['extras'] ?? []);
+
         self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
         self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
         
@@ -90,9 +95,6 @@ class Core {
         ]);
         self::update_rankmath_meta($post->ID, $rm_video);
 
-        $rm_model = self::compose_rankmath_for_model(get_post($model_id), [
-            'name' => $name,
-        ]);
         self::update_rankmath_meta($model_id, $rm_model);
 
         self::link_video_to_model($video_id, $model_id);
@@ -116,6 +118,10 @@ class Core {
         $ctx = self::build_ctx_model($post_id, $post->post_title, $args);
         $provider = self::provider($args['strategy']);
         $payload = $provider->generate_model($ctx);
+        $rm_model = self::compose_rankmath_for_model($post, [
+            'name' => $post->post_title,
+        ]);
+        $payload['keywords'] = array_merge([$rm_model['focus']], $rm_model['extras'] ?? []);
         if (empty($payload['title'])) {
             return ['ok' => false, 'message' => 'Generator returned empty payload'];
         }
@@ -123,9 +129,6 @@ class Core {
             return ['ok' => true, 'payload' => $payload, 'dry_run' => true];
         }
         self::write_all($post_id, $payload, 'MODEL', !empty($args['insert_content']), $ctx);
-        $rm_model = self::compose_rankmath_for_model($post, [
-            'name' => $post->post_title,
-        ]);
         self::update_rankmath_meta($post_id, $rm_model);
         return ['ok' => true, 'payload' => $payload];
     }
@@ -524,6 +527,8 @@ class Core {
             $name,
             $name
         );
+
+        error_log(self::TAG . " [RM-MODEL] focus='{$focus}' extras=" . json_encode($extras) . " for post#{$post->ID}");
 
         return [
             'focus' => $focus,
