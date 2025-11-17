@@ -51,34 +51,41 @@ class VideoSEO {
             return;
         }
 
-        $pool = Core::get_model_extra_keyword_pool();
-        $desired = [
-            'adult webcams',
-            'live cam model',
-            'adult webcam chat',
-            'live cam shows',
-        ];
-
-        $extras = [];
-        foreach ($desired as $keyword) {
-            if (in_array($keyword, $pool, true)) {
-                $extras[] = $keyword;
-            }
-        }
-
-        if (count($extras) < 4) {
-            $extras = array_slice(array_values(array_unique(array_merge($extras, $pool))), 0, 4);
-        }
-
-        $focus    = $model_name;
+        $pool    = Core::get_model_extra_keyword_pool();
+        $extras  = array_slice($pool, 0, 4);
+        $focus   = sprintf('%s live cam highlights', $model_name);
         $keywords = array_unique(array_filter(array_map('trim', array_merge([$focus], $extras))));
         $keywords_string = implode(', ', $keywords);
 
         update_post_meta($post_id, 'rank_math_focus_keyword', $keywords_string);
 
+        $rm = Core::compose_rankmath_for_video(
+            $post,
+            [
+                'name'              => $model_name,
+                'highlights_count'  => 7,
+            ]
+        );
+
+        $meta_title = get_post_meta($post_id, 'rank_math_title', true);
+        if ($meta_title === '') {
+            update_post_meta($post_id, 'rank_math_title', $rm['title']);
+        }
+
+        $meta_desc = get_post_meta($post_id, 'rank_math_description', true);
+        if ($meta_desc === '') {
+            update_post_meta($post_id, 'rank_math_description', $rm['desc']);
+        }
+
         $raw_tags = [];
-        $terms = wp_get_post_terms($post_id, 'post_tag');
-        if (!is_wp_error($terms)) {
+        foreach (['video_tag', 'post_tag', 'livejasmin_tag'] as $tax) {
+            if (!taxonomy_exists($tax)) {
+                continue;
+            }
+            $terms = wp_get_post_terms($post_id, $tax);
+            if (is_wp_error($terms)) {
+                continue;
+            }
             foreach ($terms as $term) {
                 $raw_tags[] = $term->name;
             }

@@ -61,6 +61,11 @@ class Core {
             return ['ok' => false, 'message' => 'Not a video'];
         }
 
+        $existing_focus = trim((string) get_post_meta($post->ID, 'rank_math_focus_keyword', true));
+        if ($existing_focus !== '') {
+            return ['ok' => false, 'message' => 'RankMath focus keyword already set'];
+        }
+
         $name = self::detect_model_name_from_video($post);
         if (!$name) {
             error_log(self::TAG . " abort: video#{$post->ID} '{$post->post_title}' has no detectable model name");
@@ -94,6 +99,22 @@ class Core {
             'highlights_count' => $highlights_count,
         ]);
         self::update_rankmath_meta($post->ID, $rm_video);
+
+        $looks         = self::first_looks( $video_id );
+        $tag_keywords  = self::safe_model_tag_keywords( $looks );
+        update_post_meta( $post->ID, '_tmwseo_video_tag_keywords', $tag_keywords );
+
+        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
+            error_log(
+                sprintf(
+                    '%s [RM-VIDEO] post#%d focus="%s" extras=%s',
+                    self::TAG,
+                    $post->ID,
+                    $rm_video['focus'],
+                    wp_json_encode( $rm_video['extras'] ?? [] )
+                )
+            );
+        }
 
         self::update_rankmath_meta($model_id, $rm_model);
 
@@ -461,22 +482,24 @@ class Core {
         $name = $ctx['name'];
         $num  = $ctx['highlights_count'] ?? 7;
 
-        // Focus keyword: unique to the video, not just the model name.
+        $pool   = self::model_extra_keyword_pool();
+        $extras = array_slice($pool, 0, 4);
+
         $focus = sprintf('%s live cam highlights', $name);
 
-        // Short, strong extra keywords (non-explicit, RankMath-friendly).
-        $extras = [
-            $name . ' live cam',
-            $name . ' cam model',
-            $name . ' video highlights',
-            $name . ' webcam profile',
-        ];
+        $site       = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $brand      = ucfirst(self::brand_order()[0] ?? $site);
+        $title_seed = absint($post->ID ?: crc32($name));
+        $numbers    = [3, 5, 7, 9];
+        $number     = $numbers[$title_seed % count($numbers)];
 
-        // Title and description: short, positive, no explicit wording.
-        $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
+        $title = sprintf('%s live cam highlights — %d featured moments | %s', $name, $number, $brand);
         $desc  = sprintf(
-            '%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam. Quick preview with clean pacing and a hint of what to expect live.',
-            $name
+            '%s live cam highlights with a quick reel of %d moments, direct links to live chat, and a gentle intro to %s on %s.',
+            $name,
+            $num,
+            $name,
+            $brand
         );
 
         return [
