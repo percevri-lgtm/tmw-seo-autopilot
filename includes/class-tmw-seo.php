@@ -483,30 +483,39 @@ class Core {
     }
 
     protected static function model_extra_keyword_pool(): array {
-        return [
-            'adult webcams',
-            'adult web cams',
-            'adult webcam chat',
-            'adult live cams',
-            'adult cam chat',
-            'adult cam',
-            'adult webcam',
-            'webcam girls live',
-            'live cam model',
-            'live cam models',
-            'live webcam models',
-            'live cam girls',
-            'live webcam chat',
-            'live cam broadcast',
-            'cam girl live',
-            'cam girls online',
-            'live cam show',
-            'webcam model profile',
-            'adult cam streaming',
-            'live webcam streaming',
-            'cam model online',
-        ];
-    }
+    return [
+        'adult webcams',
+        'adult web cams',
+        'adult webcam',
+        'adult webcam chat',
+        'adult cam',
+        'adult cam chat',
+        'adult live cams',
+        'adult live webcam',
+        'adult cam site',
+        'adult cam website',
+        'adult cam streaming',
+        'live cam model',
+        'live cam models',
+        'live webcam models',
+        'live webcam chat',
+        'live webcam streaming',
+        'live webcam girls',
+        'live cam girls',
+        'live cam girl',
+        'cam girl live',
+        'cam girls online',
+        'webcam girls live',
+        'webcam chat live',
+        'live cam show',
+        'live cam shows',
+        'live cam performers',
+        'live cam broadcast',
+        'live cam profiles',
+        'webcam model profile',
+        'cam model online',
+    ];
+}
 
     protected static function model_random_extras(int $count = 4): array {
         $pool = self::model_extra_keyword_pool();
