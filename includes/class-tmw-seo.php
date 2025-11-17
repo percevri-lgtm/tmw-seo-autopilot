@@ -633,7 +633,18 @@ class Core {
         $focus = $name; // focus keyword is ONLY the name
 
         // Build extras from safe model tags + generic soft adult phrases.
-        $looks        = self::first_looks($post->ID);
+        // Collect looks (tags/categories) from the model itself…
+        $looks = self::first_looks($post->ID);
+
+        // …and also from the latest linked video, if present.
+        $video_id = (int) get_post_meta($post->ID, '_tmwseo_latest_video_id', true);
+        if ($video_id) {
+            $looks = array_merge($looks, self::first_looks($video_id));
+        }
+
+        // De-duplicate so we don't repeat the same tag twice.
+        $looks = array_values(array_unique($looks));
+
         $tag_keywords = self::safe_model_tag_keywords($looks);
         $generic      = self::model_random_extras(4);
 
