@@ -479,20 +479,17 @@ class Core {
         ];
     }
 
-    public static function compose_rankmath_for_model(\WP_Post $post, array $ctx): array {
-        $name = $ctx['name'];
-
-        // Model page is the canonical entity page → focus is just the name.
-        $focus = $name;
+    public static function compose_rankmath_for_model( \WP_Post $post, array $ctx ): array {
+        $name  = $ctx['name'];
+        $focus = $name; // focus keyword is ONLY the name
 
         $extras = [
             $name . ' live cam model',
-            $name . ' profile',
+            $name . ' webcam profile',
             $name . ' photos',
             $name . ' schedule',
         ];
 
-        // Slightly richer title for better CTR, but still clean.
         $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
         $desc  = sprintf(
             '%s on Top Models Webcam. Profile, photos, schedule tips, and live chat links. Follow %s for highlights and updates.',
@@ -501,17 +498,17 @@ class Core {
         );
 
         return [
-            'focus'  => $focus,
+            'focus' => $focus,
             'extras' => $extras,
-            'title'  => $title,
-            'desc'   => $desc,
+            'title' => $title,
+            'desc'  => $desc,
         ];
     }
 
     public static function update_rankmath_meta(int $post_id, array $rm): void {
-        $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'])));
+        $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'] ?? [])));
         update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $kw));
-         update_post_meta($post_id, 'rank_math_title', $rm['title']);
+        update_post_meta($post_id, 'rank_math_title', $rm['title']);
         update_post_meta($post_id, 'rank_math_description', $rm['desc']);
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
         error_log(self::TAG . " [RM] set focus='" . $rm['focus'] . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
