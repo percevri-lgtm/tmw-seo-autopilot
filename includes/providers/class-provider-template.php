@@ -87,100 +87,110 @@ class Template {
 
     /** MODEL: returns ['title','meta','keywords'=>[5],'content'] */
     public function generate_model(array $c): array {
-        $name = $c['name'];
-        $site = $c['site'];
-        $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
-        $meta  = sprintf('%s on %s. Profile, photos, schedule tips, and live chat links. Follow %s for highlights and updates.', $name, $site, $name);
-        $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
+        $name = isset($c['name']) ? $c['name'] : '';
+        $site = isset($c['site']) ? $c['site'] : '';
+        $focus = isset($c['focus']) ? $c['focus'] : $name;
+        $extras = isset($c['extras']) && is_array($c['extras']) ? $c['extras'] : [];
 
-        $lead = sprintf('%s introduces this profile with a calm overview of what their room feels like, from the music choices to the steady welcome message that keeps new visitors comfortable.', $name);
+        $safe_name = esc_html($name);
+        $safe_site = esc_html($site ?: 'Top Models Webcam');
+
+        $title_patterns = [
+            '%s — 7 Charming Quick Facts & Profile Highlights',
+            '%s — 5 Essential Profile Highlights & Schedule Notes',
+            '%s — 10 Favorite Moments & Live Cam Profile Guide',
+        ];
+        $title = sprintf($title_patterns[array_rand($title_patterns)], $name);
+
+        $meta = sprintf(
+            '%s on %s. Profile, photos, schedule notes, and live chat links. Follow %s for highlight clips, updates, and friendly live shows.',
+            $name,
+            $site ?: 'Top Models Webcam',
+            $name
+        );
+
+        $base_keywords = [
+            $name,
+            $name . ' live cam',
+            $name . ' profile',
+            $name . ' webcam model',
+            'live cam model',
+            'webcam model profile',
+        ];
+
+        if (!empty($focus) && $focus !== $name) {
+            array_unshift($base_keywords, $focus);
+        }
+
+        $keywords = array_values(array_unique(array_merge($base_keywords, array_slice($extras, 0, 4))));
 
         $intro_paragraphs = [
-            'The opening section explains how this model frames each session with gentle lighting, soft camera moves, and a relaxed chat pace so everyone can settle in without pressure. A few favorite playlists rotate through the week, keeping mornings mellow and evenings upbeat. Notes on etiquette are written in plain language, making it easy for first-time visitors to say hello or ask about upcoming shows.',
-            'A short biography shares how the performer approaches online shows as a creative outlet. They break down how storytelling shapes each broadcast, why pacing matters, and how curiosity drives new ideas. Instead of rushing, the profile highlights the value of steady conversation, thoughtful replies, and small moments of humor that bring viewers back.',
+            '%s welcomes visitors with a calm overview of the room, explaining how playlists, chat prompts, and lighting come together so newcomers feel at ease within the first few minutes. The introduction mentions how reminders on %s keep everyone updated without needing social feeds, making the page a reliable hub for quick check-ins.',
+            '%s prefers starting shows with a relaxed tempo that lets viewers find their footing, sip a drink, and read the day’s pinned notes. The intro highlights how the profile points to schedule blocks, replay links, and a friendly FAQ so every guest knows where to click next.',
+            'Instead of rushing through announcements, %s outlines the flow of a typical session, from opening greetings to community polls. Visitors are encouraged to favorite the profile on %s and enable notifications so surprise sessions are easy to catch even on busy weekdays.',
+            'This opening section clarifies that %s values steady communication and consistent pacing. The tone stays upbeat and PG-13, focusing on music themes, camera clarity, and the easy way regulars help guide new guests toward the best moments of each broadcast on %s.',
+            '%s also shares how the room is organized, pointing out where playlists, lighting presets, and conversation starters live on the page. The goal is to remove guesswork so viewers can jump into friendly chat or request a specific vibe without interrupting the flow on %s.',
+        ];
+
+        $about_paragraphs = [
+            '%s keeps this profile honest and detailed, sharing favorite topics, comfort levels, and how personal boundaries are protected. A short backstory notes how streaming started as a creative outlet, eventually growing into a daily routine that balances calm mornings with lively evenings. Followers see that this page gathers highlights, schedule notes, and community reminders in one place.',
+            'In this section, %s explains how storytelling and music shape the channel. The performer loves quiet downtempo tracks for reflective conversations and brighter playlists for group energy. Viewers learn about favorite hobbies off-stream, from journaling to crafting playlists for friends, giving the page a grounded, personable feel.',
+            'There is also a focus on how %s maintains a respectful environment. Platform tools are used to filter disruptive messages, and clear house rules encourage polite chat. New followers are reminded that questions are welcome, and even shy viewers can drop a greeting without pressure.',
+            '%s highlights how the profile evolved through community feedback on %s. Small tweaks like clearer camera angles, better captions on photo sets, and themed nights came directly from viewer suggestions. That collaborative approach keeps the content feeling fresh without losing its comforting core.',
+            'While the page stays professional, %s adds warm anecdotes about memorable streams, like the night a playlist sparked a city-themed discussion or the time a supportive viewer shared study tips with the room. These little notes make the profile feel like a friendly journal of shared moments.',
         ];
 
         $style_paragraphs = [
-            sprintf('%s describes their on-cam style as a mix of playful chat and calm confidence. The performer likes to set themes for the week—cozy lounge vibes one day, bold colors the next—so regulars know what mood to expect. The tone stays friendly and respectful, with room for inside jokes that make long-time fans feel seen.', $name),
-            'Another paragraph covers how this model uses props, lighting gels, and subtle camera angles to keep each session fresh without overwhelming the room. Music and pacing adjust based on chat energy: chill beats when conversations get deeper, brighter playlists when the vibe turns celebratory. Viewers learn that private room moments simply extend the same care with a bit more focus on one-on-one interaction.',
+            'Streaming sessions with %s revolve around atmosphere: warm lighting, steady camera angles, and clear sound that keeps voices crisp. The performer narrates small actions so viewers never feel lost, describing when a new playlist starts or when the vibe is switching from calm talk to upbeat dancing in a PG-13 way.',
+            'Expect a thoughtful pace from %s, where every transition is explained before it happens. When a poll closes, the results are read aloud; when a new outfit is teased, the schedule for that segment is shared. That structure builds trust, especially for fans who prefer planned, low-stress interactions.',
+            '%s also balances spontaneity with predictability. Surprise mini-games pop up between songs, while regular themed nights keep the calendar anchored. The camera stays respectful, focusing on expressions, gestures, and set design rather than explicit visuals, making the content welcoming to a broad audience.',
+            'Lighting and music choices are announced early so viewers with sensory preferences can prepare. %s notes when strobes will stay off, when softer color washes are coming, and how quieter songs signal more intimate, conversational moments that still stay within friendly PG-13 boundaries.',
+            'During each stream, %s often pauses to recap chat highlights, thank recent supporters, and encourage newcomers to say hello. These check-ins make the room feel guided, ensuring that even when energy rises, the experience remains comfortable and considerate.',
         ];
 
         $schedule_paragraphs = [
-            sprintf('Scheduling is straightforward: the performer usually signs on in the early evening, with extra weekend slots for fans in different time zones. %s posts reminders in advance so followers can plan around work or study hours. If a surprise stream pops up, the banner on the profile updates first.', $name),
-            'A longer scheduling note explains how daylight savings shifts are handled and why the performer sometimes runs short daytime check-ins. These quick sessions act like previews, giving everyone a chance to share ideas for the next full-length show. Time-zone conversions are spelled out clearly, and a recurring calendar link keeps fans from guessing when to drop by.',
+            '%s keeps scheduling transparent with weekly posts and day-of reminders. Typical sessions start in the early evening, but the profile notes when daytime check-ins happen for viewers in other time zones. Calendar links and pinned updates on %s make it easy to track every change without sifting through old messages.',
+            'When schedules shift, %s posts a quick explanation along with the adjusted plan, emphasizing reliability. Followers see which nights feature longer sets, which afternoons host short chats, and how to prepare headphones or screens for the best viewing angle before the show begins.',
+            'Seasonal events also show up in this section. %s might host theme weeks tied to music genres or city-inspired sets, always noting start times and estimated durations. The goal is to help fans plan around work, study, or family commitments while still catching live moments.',
+            '%s shares how reminders are delivered: push notifications on the platform, email digests, and a small banner at the top of the profile. This layered approach means even casual viewers can catch at least one alert before the room goes live.',
+            'The schedule section encourages viewers to join a few minutes early. %s uses that window for sound checks, lighting tweaks, and quick chat icebreakers so the main show starts smoothly. That routine builds predictability and keeps technical hiccups from interrupting the fun.',
         ];
 
-        $experience_paragraphs = [
-            sprintf('Public rooms stay welcoming with open chat, easy-going icebreakers, and light-hearted polls. %s mentions that private time keeps the same respectful tone while letting conversations move at a slower, more personal pace. The profile clarifies that boundaries stay firm so everyone knows the space is safe and considerate.', $name),
-            'Expectations are set with examples: public segments might showcase new playlists, outfit previews, or a guided tour of recent photos, while private sessions focus on deeper conversation and tailored requests within the posted rules. The performer emphasizes that clear communication keeps the experience smooth for both sides.',
+        $community_paragraphs = [
+            'Community notes explain how %s keeps chat welcoming. Moderators greet newcomers, share links to rules, and highlight viewer milestones like anniversaries or helpful tips. The performer reminds everyone that kind language and patience make the room feel like a lounge rather than a rushed feed.',
+            '%s encourages gentle conversation starters: favorite playlists, travel stories, study hacks, or feel-good shows worth recommending. Viewers often share productivity tricks while waiting for a segment to start, turning idle minutes into collaborative time that keeps energy positive.',
+            'Support tips focus on small gestures. %s thanks viewers for simple actions like clicking follow, answering polls, or sharing timing preferences. These signals help tailor each stream while keeping expectations realistic and respectful.',
+            'Another paragraph outlines how %s handles requests. Clear boundaries are restated, and suggestions that align with the day’s theme are queued up. When something cannot happen, the performer explains why, preserving trust and keeping the conversation on track.',
+            'Finally, the community section invites viewers to bookmark the profile and use reaction tools to cheer on the performer. %s notes that this ongoing encouragement shapes future sets and helps decide which highlights become permanent clips on the profile.',
         ];
 
-        $support_paragraphs = [
-            sprintf('Following and supporting this model is easy: bookmark the profile, tap notifications, and leave thoughtful messages after each session. %s thanks fans regularly and highlights how small gestures—poll votes, playlist suggestions, or kind DMs—help shape the next broadcast.', $name),
-            'Subscribers learn how to join community playlists, participate in seasonal theme votes, and share feedback on camera setups. There are tips for tipping responsibly, using platform tools to stay anonymous if desired, and keeping chat friendly so newcomers feel welcome. Links to the schedule and photo gallery are grouped together for quick access.',
+        $faq_paragraphs = [
+            'When asked about typical online times, %s usually points to early evenings with bonus weekend shows; the FAQ reminds readers to check the banner on %s for last-minute adjustments.',
+            'Viewers also ask about the room vibe. The answer emphasizes friendly chat, curated music, and calm pacing, plus reminders that respectful language keeps the mood bright and inclusive for everyone present.',
+            'Questions about private requests are covered by explaining that one-on-one time mirrors the public tone—focused on conversation, music choices, and guided moments that stay within posted guidelines. Boundaries remain clear so everyone feels safe.',
+            'Fans often wonder how to support the performer. The FAQ suggests turning on notifications, bookmarking the profile, participating in polls, and sharing thoughtful feedback after each stream to help shape future sessions.',
+            'Another common question involves technical prep. %s recommends using headphones for audio cues, keeping screens at eye level for comfort, and testing connections a few minutes before showtime to avoid missing the intro.',
         ];
 
-        $toc = '<nav class="tmw-mini-toc">
-  <a href="#intro">Intro</a> · <a href="#style">Style</a> · <a href="#schedule">Schedule</a> · <a href="#experience">Experience</a> · <a href="#support">Support</a> · <a href="#faq">FAQ</a>
-</nav>';
+        $build_paragraphs = function (array $templates, int $count = 3) use ($safe_name, $safe_site): string {
+            shuffle($templates);
+            $html = '';
+            foreach (array_slice($templates, 0, $count) as $tpl) {
+                $html .= '<p>' . sprintf($tpl, $safe_name, $safe_site) . '</p>';
+            }
+            return $html;
+        };
 
-        $blocks = [
-            ['p', $lead],
-            ['raw', $toc],
-            ['h2', 'Intro', ['id' => 'intro']],
-        ];
-        foreach ($intro_paragraphs as $p) {
-            $blocks[] = ['p', $p];
-        }
-
-        $blocks[] = ['h2', 'Style & Personality', ['id' => 'style']];
-        foreach ($style_paragraphs as $p) {
-            $blocks[] = ['p', $p];
-        }
-
-        $blocks[] = ['h2', 'Schedule & Time Zones', ['id' => 'schedule']];
-        foreach ($schedule_paragraphs as $p) {
-            $blocks[] = ['p', $p];
-        }
-
-        $blocks[] = ['h2', 'Public vs Private Expectations', ['id' => 'experience']];
-        foreach ($experience_paragraphs as $p) {
-            $blocks[] = ['p', $p];
-        }
-
-        $blocks[] = ['h2', 'Follow & Support', ['id' => 'support']];
-        foreach ($support_paragraphs as $p) {
-            $blocks[] = ['p', $p];
-        }
-
-        if (!empty($c['brand_url'])) {
-            $blocks[] = ['raw', '<p class="tmwseo-inline-cta"><a href="' . esc_url($c['brand_url']) . '" rel="sponsored nofollow noopener" target="_blank">Join the next live chat</a> whenever the schedule note shows the room is open.</p>'];
-        }
-
-        $faq = [
-            ['When is the performer usually online?', 'Most sessions start in the early evening with extra weekend slots; check the schedule notes for updates.'],
-            ['What is the vibe in public chat?', 'Light conversation, music requests, polls, and previews of photos or upcoming themes.'],
-            ['How do private sessions differ?', 'They keep the respectful tone of public chat while offering slower, more personal conversation within posted boundaries.'],
-            ['How can fans support?', 'Turn on notifications, join polls, leave encouraging messages, and follow the schedule to drop in when the room goes live.'],
-        ];
-        $blocks[] = ['h2', 'FAQ', ['id' => 'faq']];
-        $blocks = array_merge($blocks, $this->faq_html($faq));
-
-        $content = $this->html($blocks);
-
-        $max_name_mentions = 10;
-        $mentions = substr_count(strtolower($content), strtolower($name));
-        if ($mentions > $max_name_mentions) {
-            $excess = $mentions - $max_name_mentions;
-            $content = preg_replace('/' . preg_quote($name, '/') . '/i', 'this model', $content, $excess);
-        }
-
-        $content = $this->enforce_word_goal($content, $name);
-        $content = $this->apply_density_guard($content, $name);
+        $content  = '<p>' . sprintf('%s welcomes visitors with a profile that explains their style, schedule, and what viewers can expect from each live show on %s.', $safe_name, $safe_site) . '</p>';
+        $content .= '<h2>Intro</h2>' . $build_paragraphs($intro_paragraphs, 3);
+        $content .= '<h2>About ' . $safe_name . '</h2>' . $build_paragraphs($about_paragraphs, 3);
+        $content .= '<h2>Streaming Style &amp; What to Expect</h2>' . $build_paragraphs($style_paragraphs, 3);
+        $content .= '<h2>Schedule Notes</h2>' . $build_paragraphs($schedule_paragraphs, 3);
+        $content .= '<h2>Community &amp; Tips</h2>' . $build_paragraphs($community_paragraphs, 3);
+        $content .= '<h2>FAQ</h2>' . $build_paragraphs($faq_paragraphs, 3);
 
         return ['title' => $title, 'meta' => $meta, 'keywords' => $keywords, 'content' => $content];
     }
-
     /* helpers */
     protected function html(array $blocks): string {
         $out = '';
