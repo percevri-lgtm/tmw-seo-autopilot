@@ -107,7 +107,7 @@ class Core {
     /** Manual model generation for admin / CLI compatibility */
     public static function generate_and_write(int $post_id, array $args = []): array {
         $args = wp_parse_args($args, [
-            'strategy' => 'template',
+            'strategy' => Providers\OpenAI::is_enabled() ? 'openai' : 'template',
             'insert_content' => true,
             'dry_run' => false,
         ]);
@@ -116,6 +116,7 @@ class Core {
             return ['ok' => false, 'message' => 'Invalid post or type'];
         }
         $ctx = self::build_ctx_model($post_id, $post->post_title, $args);
+        // DEBUG: Admin AJAX generate funnels through here; default strategy previously forced Template and skipped the OpenAI model prompt.
         $provider = self::provider($args['strategy']);
         $payload = $provider->generate_model($ctx);
         $rm_model = self::compose_rankmath_for_model($post, [
