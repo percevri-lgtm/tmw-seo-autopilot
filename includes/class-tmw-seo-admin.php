@@ -31,9 +31,17 @@ class Admin {
 
     public static function render_box($post) {
         wp_nonce_field('tmw_seo_box', 'tmw_seo_nonce');
+        $openai_enabled = \TMW_SEO\Providers\OpenAI::is_enabled();
+        $default_strategy = $openai_enabled ? 'openai' : 'template';
+        $template_selected = $default_strategy === 'template' ? 'selected' : '';
+        $openai_selected = $default_strategy === 'openai' ? 'selected' : '';
+
         echo '<p>Generate RankMath fields + intro/bio/FAQ for this model.</p>';
         echo '<p><label><input type="checkbox" id="tmw_seo_insert" checked> Insert content block</label></p>';
-        echo '<p>Strategy: <select id="tmw_seo_strategy"><option value="template">Template</option><option value="openai">OpenAI (if configured)</option></select></p>';
+        echo '<p>Strategy: <select id="tmw_seo_strategy">';
+        echo '<option value="template" ' . $template_selected . '>Template</option>';
+        echo '<option value="openai" ' . $openai_selected . '>OpenAI (if configured)</option>';
+        echo '</select></p>';
         echo '<p><button type="button" class="button button-primary" id="tmw_seo_generate_btn">Generate</button> <button type="button" class="button" id="tmw_seo_rollback_btn">Rollback</button></p>';
         ?>
         <script>
@@ -72,7 +80,8 @@ class Admin {
         check_ajax_referer('tmw_seo_nonce', 'nonce');
         if (!current_user_can('edit_posts')) wp_send_json_error(['message' => 'No permission']);
         $post_id = (int)($_POST['post_id'] ?? 0);
-        $strategy = sanitize_text_field($_POST['strategy'] ?? 'template');
+        $default_strategy = \TMW_SEO\Providers\OpenAI::is_enabled() ? 'openai' : 'template';
+        $strategy = sanitize_text_field($_POST['strategy'] ?? $default_strategy);
         $insert = !empty($_POST['insert']);
         $res = Core::generate_and_write($post_id, ['strategy' => $strategy, 'insert_content' => $insert]);
         if ($res['ok']) wp_send_json_success(['message' => 'SEO generated']);
