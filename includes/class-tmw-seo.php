@@ -105,8 +105,10 @@ class Core {
 
         self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
         self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
-        
-        self::update_rankmath_meta($post->ID, $rm_video);
+
+        self::maybe_update_video_slug($post, $rm_video['focus']);
+
+        self::update_rankmath_meta($post->ID, $rm_video, true);
 
         $looks         = self::first_looks( $video_id );
         $tag_keywords  = self::safe_model_tag_keywords( $looks );
@@ -128,6 +130,19 @@ class Core {
 
         self::link_video_to_model($video_id, $model_id);
         self::link_model_to_video($model_id, $video_id);
+
+        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
+            error_log(
+                sprintf(
+                    '%s [VIDEO] #%d focus="%s" title="%s" desc_contains_focus=%s',
+                    self::TAG,
+                    $post->ID,
+                    $rm_video['focus'],
+                    $rm_video['title'],
+                    strpos( $rm_video['desc'], $rm_video['focus'] ) !== false ? 'yes' : 'no'
+                )
+            );
+        }
 
         error_log(self::TAG . " generated video#$video_id & model#$model_id for {$name}");
         return ['ok' => true, 'video' => $payload_video, 'model' => $payload_model, 'model_id' => $model_id];
@@ -285,9 +300,10 @@ class Core {
         $title = get_the_title($video_id);
         $slug = basename(get_permalink($video_id));
         $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $brand = ucfirst(self::brand_order()[0] ?? $site);
         // Use a distinct, non-duplicate focus for video pages so RankMath
         // doesn't complain about matching the model page focus keyword.
-        $focus = sprintf('%s live cam highlights', $name);
+        $focus = self::video_focus($name);
         $extras = [
             $name . ' live cam',
             $name . ' cam model',
@@ -301,6 +317,7 @@ class Core {
             'title' => $title,
             'slug' => $slug,
             'site' => $site,
+            'brand' => $brand,
             'hook' => $hook,
             'looks' => $looks,
             'focus' => $focus,
@@ -312,6 +329,10 @@ class Core {
             'highlights_count' => 7,
             'deep_link' => self::deep_link_url('video'),
         ];
+    }
+
+    public static function video_focus(string $name): string {
+        return sprintf('%s live cam highlights', $name);
     }
 
     protected static function build_ctx_model(int $model_id, string $name, array $args): array {
@@ -493,7 +514,7 @@ class Core {
         $pool   = self::model_extra_keyword_pool();
         $extras = array_slice($pool, 0, 4);
 
-        $focus = sprintf('%s live cam highlights', $name);
+        $focus = self::video_focus($name);
 
         $site       = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
         $brand      = ucfirst(self::brand_order()[0] ?? $site);
@@ -501,12 +522,10 @@ class Core {
         $numbers    = [3, 5, 7, 9];
         $number     = $numbers[$title_seed % count($numbers)];
 
-        $title = sprintf('%s live cam highlights — %d featured moments | %s', $name, $number, $brand);
+        $title = sprintf('%s — %d Moments on %s', $focus, $number, $brand);
         $desc  = sprintf(
-            '%s live cam highlights with a quick reel of %d moments, direct links to live chat, and a gentle intro to %s on %s.',
-            $name,
-            $num,
-            $name,
+            '%s in a short highlight reel with direct links to live chat and profile on %s. Quick preview with clean pacing and a hint of what private moments can become.',
+            $focus,
             $brand
         );
 
@@ -738,13 +757,62 @@ class Core {
         ];
     }
 
-    public static function update_rankmath_meta(int $post_id, array $rm): void {
+    public static function update_rankmath_meta(int $post_id, array $rm, bool $protect_manual = false): void {
         $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'] ?? [])));
         update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $kw));
-        update_post_meta($post_id, 'rank_math_title', $rm['title']);
-        update_post_meta($post_id, 'rank_math_description', $rm['desc']);
+
+        $existing_title = get_post_meta($post_id, 'rank_math_title', true);
+        $existing_desc  = get_post_meta($post_id, 'rank_math_description', true);
+
+        $should_update_title = !$protect_manual || $existing_title === '' || self::is_old_video_title($existing_title, $rm['focus']);
+        $should_update_desc  = !$protect_manual || $existing_desc === '' || self::is_old_video_description($existing_desc, $rm['focus']);
+
+        if ($should_update_title) {
+            update_post_meta($post_id, 'rank_math_title', $rm['title']);
+        }
+
+        if ($should_update_desc) {
+            update_post_meta($post_id, 'rank_math_description', $rm['desc']);
+        }
+
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
         error_log(self::TAG . " [RM] set focus='" . $rm['focus'] . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
+    }
+
+    protected static function is_old_video_title(string $title, string $focus): bool {
+        return stripos($title, $focus) !== false && stripos($title, 'featured moments') !== false;
+    }
+
+    protected static function is_old_video_description(string $desc, string $focus): bool {
+        return stripos($desc, $focus) !== false && stripos($desc, 'quick reel') !== false;
+    }
+
+    public static function maybe_update_video_slug( \WP_Post $post, string $focus ): void {
+        if ( ! in_array( $post->post_type, self::video_post_types(), true ) ) {
+            return;
+        }
+
+        if ( get_post_meta( $post->ID, '_tmwseo_slug_locked', true ) ) {
+            return;
+        }
+
+        $slug_focus = sanitize_title( $focus );
+        if ( ! $slug_focus ) {
+            return;
+        }
+
+        if ( strpos( $post->post_name, $slug_focus ) !== false ) {
+            update_post_meta( $post->ID, '_tmwseo_slug_locked', 1 );
+            return;
+        }
+
+        wp_update_post(
+            [
+                'ID'        => $post->ID,
+                'post_name' => $slug_focus,
+            ]
+        );
+        update_post_meta( $post->ID, '_tmwseo_slug_locked', 1 );
     }
 
     /** Cross-links */

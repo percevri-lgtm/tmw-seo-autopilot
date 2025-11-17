@@ -10,11 +10,16 @@ class Template {
         $site   = $c['site'];
         $focus  = trim($c['focus'] ?? $name);
         $num    = $c['highlights_count'] ?? 7;
-        $title  = sprintf('%s — %d live cam highlights', $focus, $num);
-        $meta   = sprintf('%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam.', $name);
+        $brand  = $c['brand'] ?? ($c['site'] ?: 'Top Models Webcam');
+        $title  = sprintf('%s — %d Moments on %s', $focus, $num, $brand);
+        $meta   = sprintf(
+            '%s in a short highlight reel with direct links to live chat and profile on %s. Quick preview with clean pacing and a hint of what private moments can become.',
+            $focus,
+            $brand
+        );
         $keywords = array_merge([$focus], array_slice($c['extras'], 0, 4));
 
-        $lead = sprintf('%s opens this %s collection with %s front and center, so the first beat signals the exact vibe to expect.', $name, strtolower($hook), $focus);
+        $lead = sprintf('%s opens this %s collection with two steady beats that feel like a guided tour instead of a teaser.', $focus, strtolower($hook));
         $lead .= sprintf(' %s keeps the focus on confident posture and balanced breathing so the first cut already hints at what private show moments can become.', $name);
 
         $intro_paragraphs = [
@@ -44,6 +49,7 @@ class Template {
         ];
 
         $blocks = [
+            ['h2', $focus, ['id' => 'focus-keyword']],
             ['p', $lead],
             ['raw', $this->mini_toc()],
             ['h2', 'Intro — ' . $focus, ['id' => 'intro']],

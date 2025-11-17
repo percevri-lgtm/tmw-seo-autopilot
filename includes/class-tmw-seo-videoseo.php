@@ -51,14 +51,6 @@ class VideoSEO {
             return;
         }
 
-        $pool    = Core::get_model_extra_keyword_pool();
-        $extras  = array_slice($pool, 0, 4);
-        $focus   = sprintf('%s live cam highlights', $model_name);
-        $keywords = array_unique(array_filter(array_map('trim', array_merge([$focus], $extras))));
-        $keywords_string = implode(', ', $keywords);
-
-        update_post_meta($post_id, 'rank_math_focus_keyword', $keywords_string);
-
         $rm = Core::compose_rankmath_for_video(
             $post,
             [
@@ -67,15 +59,9 @@ class VideoSEO {
             ]
         );
 
-        $meta_title = get_post_meta($post_id, 'rank_math_title', true);
-        if ($meta_title === '') {
-            update_post_meta($post_id, 'rank_math_title', $rm['title']);
-        }
+        Core::maybe_update_video_slug( $post, $rm['focus'] );
 
-        $meta_desc = get_post_meta($post_id, 'rank_math_description', true);
-        if ($meta_desc === '') {
-            update_post_meta($post_id, 'rank_math_description', $rm['desc']);
-        }
+        Core::update_rankmath_meta( $post_id, $rm, true );
 
         $raw_tags = [];
         foreach (['video_tag', 'post_tag', 'livejasmin_tag'] as $tax) {
@@ -97,11 +83,12 @@ class VideoSEO {
         if (defined('TMW_DEBUG') && TMW_DEBUG) {
             error_log(
                 sprintf(
-                    '%s [RM-VIDEO] post#%d focus="%s" extras=%s',
+                    '%s [RM-VIDEO] post#%d focus="%s" title="%s" desc_contains_focus=%s',
                     Core::TAG,
                     $post_id,
-                    $focus,
-                    wp_json_encode($extras)
+                    $rm['focus'],
+                    $rm['title'],
+                    strpos( $rm['desc'], $rm['focus'] ) !== false ? 'yes' : 'no'
                 )
             );
         }
