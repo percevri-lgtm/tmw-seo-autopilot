@@ -5,15 +5,16 @@ if (!defined('ABSPATH')) exit;
 class Template {
     /** VIDEO: returns ['title','meta','keywords'=>[5],'content'] */
     public function generate_video(array $c): array {
-        $name = $c['name'];
-        $hook = $c['hook'];
-        $site = $c['site'];
-        $num = $c['highlights_count'] ?? 7;
-        $title = sprintf('%s — %d Live Cam Highlights', $name, $num);
-        $meta  = sprintf('%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam.', $name);
-        $keywords = array_merge([$c['focus']], array_slice($c['extras'], 0, 4));
+        $name   = $c['name'];
+        $hook   = $c['hook'];
+        $site   = $c['site'];
+        $focus  = trim($c['focus'] ?? $name);
+        $num    = $c['highlights_count'] ?? 7;
+        $title  = sprintf('%s — %d live cam highlights', $focus, $num);
+        $meta   = sprintf('%s in a short highlight reel with direct links to live chat and profile on Top Models Webcam.', $name);
+        $keywords = array_merge([$focus], array_slice($c['extras'], 0, 4));
 
-        $lead = sprintf('%s opens this %s collection with two steady beats that feel like a guided tour instead of a teaser.', $name, strtolower($hook));
+        $lead = sprintf('%s opens this %s collection with %s front and center, so the first beat signals the exact vibe to expect.', $name, strtolower($hook), $focus);
         $lead .= sprintf(' %s keeps the focus on confident posture and balanced breathing so the first cut already hints at what private show moments can become.', $name);
 
         $intro_paragraphs = [
@@ -45,12 +46,12 @@ class Template {
         $blocks = [
             ['p', $lead],
             ['raw', $this->mini_toc()],
-            ['h2', 'Intro', ['id' => 'intro']],
+            ['h2', 'Intro — ' . $focus, ['id' => 'intro']],
         ];
         foreach ($intro_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
-        $blocks[] = ['h2', 'Highlights', ['id' => 'highlights']];
+        $blocks[] = ['h2', 'Highlights — ' . $focus, ['id' => 'highlights']];
         foreach ($highlight_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -79,8 +80,8 @@ class Template {
         $blocks = array_merge($blocks, $this->faq_html($faq));
 
         $content = $this->html($blocks);
-        $content = $this->enforce_word_goal($content, $name);
-        $content = $this->apply_density_guard($content, $name);
+        $content = $this->enforce_word_goal($content, $focus);
+        $content = $this->apply_density_guard($content, $focus);
 
         return ['title' => $title, 'meta' => $meta, 'keywords' => $keywords, 'content' => $content];
     }
