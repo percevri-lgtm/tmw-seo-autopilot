@@ -479,16 +479,44 @@ class Core {
         ];
     }
 
+    protected static function model_extra_keyword_pool(): array {
+        return [
+            'adult webcams',
+            'adult web cams',
+            'adult webcam chat',
+            'adult live cams',
+            'adult cam chat',
+            'adult cam',
+            'adult webcam',
+            'webcam girls live',
+            'live cam model',
+            'live cam models',
+            'live webcam models',
+            'live cam girls',
+            'live webcam chat',
+            'live cam broadcast',
+            'cam girl live',
+            'cam girls online',
+            'live cam show',
+            'webcam model profile',
+            'adult cam streaming',
+            'live webcam streaming',
+            'cam model online',
+        ];
+    }
+
+    protected static function model_random_extras(int $count = 4): array {
+        $pool = self::model_extra_keyword_pool();
+        shuffle($pool);
+        return array_slice($pool, 0, $count);
+    }
+
     public static function compose_rankmath_for_model( \WP_Post $post, array $ctx ): array {
         $name  = $ctx['name'];
         $focus = $name; // focus keyword is ONLY the name
 
-        $extras = [
-            $name . ' live cam model',
-            $name . ' webcam profile',
-            $name . ' photos',
-            $name . ' schedule',
-        ];
+        // Random soft adult extras for model pages
+        $extras = self::model_random_extras(4);
 
         $title = sprintf('%s — Live Cam Model Profile & Schedule', $name);
         $desc  = sprintf(
