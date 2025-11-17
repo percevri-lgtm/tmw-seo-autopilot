@@ -76,6 +76,24 @@ class Core {
         $ctx_video = self::build_ctx_video($video_id, $model_id, $name, $args);
         $ctx_model = self::build_ctx_model($model_id, $name, array_merge($args, ['video_id' => $video_id]));
 
+        $highlights_count = $ctx_video['highlights_count'] ?? 7;
+
+        $rm_video = self::compose_rankmath_for_video(
+            $post,
+            [
+                'name'             => $name,
+                'slug'             => $post->post_name,
+                'brand_url'        => $ctx_video['brand_url'] ?? '',
+                'model_url'        => $ctx_video['model_url'] ?? '',
+                'highlights_count' => $highlights_count,
+            ]
+        );
+
+        $ctx_video['focus'] = $rm_video['focus'];
+        if (!empty($rm_video['extras'])) {
+            $ctx_video['extras'] = $rm_video['extras'];
+        }
+
         $provider = self::provider($args['strategy']);
         $payload_video = $provider->generate_video($ctx_video);
         $payload_model = $provider->generate_model($ctx_model);
@@ -88,16 +106,6 @@ class Core {
         self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
         self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
         
-        $brand_url = self::affiliate_url($name, '', $post->ID, $post->post_name);
-        $model_url = get_permalink($model_id);
-        $highlights_count = $ctx_video['highlights_count'] ?? 7;
-        $rm_video = self::compose_rankmath_for_video($post, [
-            'name' => $name,
-            'slug' => $post->post_name,
-            'brand_url' => $brand_url,
-            'model_url' => $model_url,
-            'highlights_count' => $highlights_count,
-        ]);
         self::update_rankmath_meta($post->ID, $rm_video);
 
         $looks         = self::first_looks( $video_id );
