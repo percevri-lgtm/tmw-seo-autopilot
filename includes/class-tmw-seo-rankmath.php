@@ -82,7 +82,7 @@ class RankMath {
         if (!$post instanceof \WP_Post) {
             return false;
         }
-        if (!is_singular(Core::MODEL_PT) && $post->post_type !== Core::MODEL_PT) {
+        if (!is_singular(Core::MODEL_PT) || $post->post_type !== Core::MODEL_PT) {
             return false;
         }
         return true;
