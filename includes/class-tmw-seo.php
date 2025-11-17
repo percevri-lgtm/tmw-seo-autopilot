@@ -290,7 +290,11 @@ class Core {
         $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
         $slug = basename(get_permalink($model_id));
         $focus = $name;
-        $extras = self::pick_extras($name, $looks, ['live chat', 'profile', 'schedule']);
+        // Use the same extras as RankMath for the model context, when possible.
+        $model_post = get_post( $model_id );
+        $extras     = $model_post instanceof \WP_Post
+            ? self::compute_model_extras( $model_post, [ 'name' => $name ] )
+            : self::pick_extras($name, $looks, ['live chat', 'profile', 'schedule']);
         $video_id = (int) ($args['video_id'] ?? 0);
         return [
             'model_id' => $model_id,
@@ -629,29 +633,42 @@ class Core {
         return array_values(array_unique($keywords));
     }
 
+    /**
+     * Compute the extra keywords for a model post, based on safe tags and
+     * the generic soft adult pool. Uses tags from the model itself and,
+     * when available, from its latest linked video.
+     */
+    protected static function compute_model_extras( \WP_Post $post, array $ctx = [] ): array {
+        // Collect looks (tags/categories) from the model post.
+        $looks = self::first_looks( $post->ID );
+
+        // Also merge looks from the latest linked video, if present.
+        $video_id = (int) get_post_meta( $post->ID, '_tmwseo_latest_video_id', true );
+        if ( $video_id ) {
+            $looks = array_merge( $looks, self::first_looks( $video_id ) );
+        }
+
+        // De-duplicate raw tag names.
+        $looks = array_values( array_unique( $looks ) );
+
+        // Build safe tag-based keywords.
+        $tag_keywords = self::safe_model_tag_keywords( $looks );
+
+        // Generic soft adult keywords from the pool.
+        $generic = self::model_random_extras( 4 );
+
+        // Merge, de-duplicate, and limit to 4 extras.
+        $all_extras = array_values( array_unique( array_merge( $tag_keywords, $generic ) ) );
+
+        return array_slice( $all_extras, 0, 4 );
+    }
+
     public static function compose_rankmath_for_model( \WP_Post $post, array $ctx ): array {
         $name  = $ctx['name'];
         $focus = $name; // focus keyword is ONLY the name
 
-        // Build extras from safe model tags + generic soft adult phrases.
-        // Collect looks (tags/categories) from the model itself…
-        $looks = self::first_looks($post->ID);
-
-        // …and also from the latest linked video, if present.
-        $video_id = (int) get_post_meta($post->ID, '_tmwseo_latest_video_id', true);
-        if ($video_id) {
-            $looks = array_merge($looks, self::first_looks($video_id));
-        }
-
-        // De-duplicate so we don't repeat the same tag twice.
-        $looks = array_values(array_unique($looks));
-
-        $tag_keywords = self::safe_model_tag_keywords($looks);
-        $generic      = self::model_random_extras(4);
-
-        // Merge, de-duplicate, and limit to 4 extras.
-        $all_extras = array_values(array_unique(array_merge($tag_keywords, $generic)));
-        $extras     = array_slice($all_extras, 0, 4);
+        // Use the unified extras computation for model pages.
+        $extras = self::compute_model_extras( $post, $ctx );
 
         if (class_exists(__NAMESPACE__ . '\\RankMath') && method_exists(RankMath::class, 'generate_model_snippet_title')) {
             $title = RankMath::generate_model_snippet_title($post);
