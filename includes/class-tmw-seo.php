@@ -526,25 +526,33 @@ class Core {
     }
 
     public static function compose_rankmath_for_video(\WP_Post $post, array $ctx): array {
-        $name = $ctx['name'];
-        $num  = $ctx['highlights_count'] ?? 7;
-
-        $pool   = self::model_extra_keyword_pool();
-        $extras = array_slice($pool, 0, 4);
-
+        $name  = $ctx['name'];
         $focus = self::video_focus($name);
 
-        $site       = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        $brand      = ucfirst(self::brand_order()[0] ?? $site);
-        $title_seed = absint($post->ID ?: crc32($name));
-        $numbers    = [3, 5, 7, 9];
-        $number     = $numbers[$title_seed % count($numbers)];
+        $site  = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $brand = ucfirst(self::brand_order()[0] ?? $site);
 
-        $title = sprintf('%s — %d Moments on %s', $focus, $number, $brand);
+        $looks          = self::first_looks($post->ID);
+        $tag_keywords   = self::safe_model_tag_keywords($looks);
+        $generic        = self::model_random_extras(4);
+        $all_extras     = array_values(array_unique(array_merge($tag_keywords, $generic)));
+        $extras         = array_slice($all_extras, 0, 4);
+        $tag_descriptor = $tag_keywords[0] ?? ($generic[0] ?? 'webcam model');
+
+        $title_seed  = absint($post->ID ?: crc32($name));
+        $numbers     = [3, 4, 5, 6, 7, 8, 9];
+        $power_words = ['Must-See', 'Exclusive', 'Top', 'Prime'];
+        $number      = $numbers[$title_seed % count($numbers)];
+        $power       = $power_words[$title_seed % count($power_words)];
+
+        $title = sprintf('Cam Model %s — %d %s Live Highlights', $name, $number, $power);
         $desc  = sprintf(
-            '%s in a short highlight reel with direct links to live chat and profile on %s. Quick preview with clean pacing and a hint of what private moments can become.',
-            $focus,
-            $brand
+            '%s in %d %s live highlights on %s. %s vibes with quick links to live chat and profile.',
+            $name,
+            $number,
+            strtolower($power),
+            $brand,
+            $tag_descriptor
         );
 
         return [
