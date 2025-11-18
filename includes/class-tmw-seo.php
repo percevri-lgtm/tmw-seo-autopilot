@@ -89,7 +89,7 @@ class Core {
             ]
         );
 
-        self::maybe_update_video_title( $post, $rm_video['focus'] );
+        self::maybe_update_video_title( $post, $rm_video['focus'], $name );
 
         $ctx_video['focus'] = $rm_video['focus'];
         if (!empty($rm_video['extras'])) {
@@ -789,7 +789,22 @@ class Core {
         return stripos($desc, $focus) !== false && stripos($desc, 'quick reel') !== false;
     }
 
-    public static function maybe_update_video_title( \WP_Post $post, string $focus ): void {
+    protected static function build_video_post_title( \WP_Post $post, string $focus, string $model_name ): string {
+        $original = trim( (string) $post->post_title );
+        $focus    = trim( (string) $focus );
+
+        if ( $original !== '' && stripos( $original, $focus ) !== false ) {
+            return $original;
+        }
+
+        if ( $original !== '' ) {
+            return sprintf( '%s — %s', $focus, $original );
+        }
+
+        return $focus;
+    }
+
+    public static function maybe_update_video_title( \WP_Post $post, string $focus, string $model_name ): void {
         $post_id = $post->ID;
 
         $post = get_post( $post_id );
@@ -811,20 +826,19 @@ class Core {
             return;
         }
 
-        $focus = trim( (string) $focus );
+        $focus      = trim( (string) $focus );
+        $model_name = trim( (string) $model_name );
         if ( $focus === '' ) {
             return;
         }
 
-        $original_title = (string) $post->post_title;
+        $new_title = self::build_video_post_title( $post, $focus, $model_name );
+        $new_title = trim( (string) $new_title );
 
-        if ( stripos( $original_title, $focus ) !== false ) {
-            $new_title = $original_title;
-        } else {
-            $new_title = $focus . ' — ' . $original_title;
-        }
+        // Lock immediately to prevent re-entrancy when wp_update_post triggers save_post again.
+        update_post_meta( $post_id, '_tmwseo_video_title_locked', 1 );
 
-        if ( $new_title !== $original_title ) {
+        if ( $new_title !== '' && $new_title !== $post->post_title ) {
             wp_update_post(
                 [
                     'ID'         => $post_id,
@@ -833,16 +847,14 @@ class Core {
             );
         }
 
-        update_post_meta( $post_id, '_tmwseo_video_title_locked', 1 );
-
         if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
             error_log(
                 sprintf(
-                    '%s [VIDEO-TITLE] #%d type=%s old="%s" new="%s" focus="%s"',
+                    '%s [VIDEO-H1] #%d type=%s old="%s" new="%s" focus="%s"',
                     self::TAG,
                     $post_id,
                     $post->post_type,
-                    $original_title,
+                    $post->post_title,
                     $new_title,
                     $focus
                 )
