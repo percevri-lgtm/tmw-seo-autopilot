@@ -29,14 +29,16 @@ class VideoTemplate {
         // --- Title: focus keyword first + a short extra keyword and power word number ---
         $title_seed  = absint(($c['video_id'] ?? 0) ?: crc32($name));
         $numbers     = [3, 4, 5, 6, 7, 8, 9];
-        $power_words = ['Amazing', 'Best', 'Prime', 'Top'];
-        $number      = $numbers[$title_seed % count($numbers)];
-        $power       = $power_words[$title_seed % count($power_words)];
+
+        // Use only power words RankMath recognises.
+        $power_words = ['Amazing', 'Best', 'Ultimate', 'Exclusive'];
+
+        $number = $numbers[$title_seed % count($numbers)];
+        $power  = $power_words[$title_seed % count($power_words)];
 
         // Use first extra keyword in title (Title Case) to keep it strong but still targeted.
         $extra_title = $extra_one ? ucwords($extra_one) : $power . ' Live';
 
-        // SEO title used by RankMath + post title (H1).
         // Example:
         //   Cam Model Anisyia — Black Hair Webcam Model (7 Amazing Highlights)
         $title = sprintf(
@@ -59,9 +61,11 @@ class VideoTemplate {
             $extra_two ?: $extra_one
         );
 
-        // --- Headings: make sure focus + extras appear in subheadings for RankMath ---
-        $intro_heading = 'Intro — ' . $focus;
+        // --- Headings ---
+        // Intro heading: do NOT repeat the full focus keyword here (helps lower density).
+        $intro_heading = 'Intro — Video Overview';
 
+        // Keep one H2 with the focus keyword so RankMath sees it in a subheading.
         if ($extra_two && $extra_two !== $extra_one) {
             $highlights_heading = sprintf('Highlights — %s & %s', $focus, $extra_two);
         } else {
@@ -74,7 +78,7 @@ class VideoTemplate {
             $faq_heading = sprintf('FAQ — %s webcam profile & show', $name);
         }
 
-        // --- Short bridge paragraph between H1 and first H2 (for better readability) ---
+        // --- Short bridge paragraph between H1 and first H2 ---
         $bridge = sprintf(
             '%s offers %d %s live highlights in one quick reel, blending %s and %s moments with fast jumps into live chat on %s.',
             $name,
@@ -87,9 +91,8 @@ class VideoTemplate {
 
         // --- Body copy ---
         $lead = sprintf(
-            '%s starts with polished pacing so the focus keyword "%s" shows up right away alongside %s cues about how to jump from this reel into live chat.',
+            '%s starts with polished pacing so the focus keyword shows up right away alongside %s cues about how to jump from this reel into live chat.',
             $name,
-            $focus,
             $extra_one
         );
 
@@ -107,8 +110,8 @@ class VideoTemplate {
                 $extra_two
             ),
             sprintf(
-                'Early shots reference the hook, showing how playlists, set design, and the warm color wash echo what happens in the full show. The pacing stays brisk so that the focus keyword never gets buried, and the description keeps returning to %s and %s style cues.',
-                $focus,
+                'Early shots reference the hook, showing how playlists, set design, and the warm color wash echo what happens in the full show. The pacing stays brisk so that the main keyword never gets buried, and the description keeps returning to %s and %s style cues.',
+                $extra_one,
                 $extra_three
             ),
             sprintf(
@@ -120,9 +123,8 @@ class VideoTemplate {
 
         $highlight_paragraphs = [
             sprintf(
-                'The highlights section dives into composition. Close-ups of expressions and quick cuts to outfit details show how %s uses subtle gestures to hold attention. This is where the focus keyword "%s" reappears, paired with %s so RankMath registers natural secondary phrases.',
+                'The highlights section dives into composition. Close-ups of expressions and quick cuts to outfit details show how %s uses subtle gestures to hold attention. This is where the main keyword reappears, paired with %s so RankMath registers natural secondary phrases.',
                 $name,
-                $focus,
                 $extra_two
             ),
             sprintf(
@@ -135,9 +137,8 @@ class VideoTemplate {
                 $brand
             ),
             sprintf(
-                'A penultimate chapter links directly to the model profile%s, summarizing wardrobe polls and recent fan-favorite segments. It repeats the phrase "%s" naturally, aligning on-page text with the chosen focus keyword while keeping the description anchored in SFW language.',
-                ! empty($c['model_permalink']) ? ' at ' . esc_url($c['model_permalink']) : '',
-                $focus
+                'A penultimate chapter links directly to the model profile%s, summarizing wardrobe polls and recent fan-favorite segments. It repeats the key phrase naturally, aligning on-page text with the chosen focus keyword while keeping the description anchored in SFW language.',
+                ! empty($c['model_permalink']) ? ' at ' . esc_url($c['model_permalink']) : ''
             ),
             sprintf(
                 'The final highlight revisits the %s tone of the reel. %s thanks supporters, mentions that %s look-inspired requests are welcome in chat, and directs everyone toward the call-to-action link without sounding salesy.',
