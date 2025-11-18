@@ -813,11 +813,53 @@ class Core {
     }
 
     protected static function is_old_video_title(string $title, string $focus): bool {
-        return stripos($title, $focus) !== false && stripos($title, 'featured moments') !== false;
+        $focus_tokens = self::video_focus_tokens($focus);
+        $legacy_markers = ['featured moments', 'live cam highlights'];
+
+        foreach ($legacy_markers as $marker) {
+            if (stripos($title, $marker) === false) {
+                continue;
+            }
+
+            foreach ($focus_tokens as $token) {
+                if ($token !== '' && stripos($title, $token) !== false) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     protected static function is_old_video_description(string $desc, string $focus): bool {
-        return stripos($desc, $focus) !== false && stripos($desc, 'quick reel') !== false;
+        $focus_tokens = self::video_focus_tokens($focus);
+
+        foreach ($focus_tokens as $token) {
+            if ($token === '') {
+                continue;
+            }
+
+            if (stripos($desc, $token) !== false && stripos($desc, 'quick reel') !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Build focus tokens that match both the current video focus prefix and legacy
+     * title/description formats that used the raw model name.
+     */
+    protected static function video_focus_tokens(string $focus): array {
+        $tokens = [trim($focus)];
+        $no_prefix = trim(preg_replace('/^cam model\s+/i', '', $focus));
+
+        if ($no_prefix !== '' && $no_prefix !== $tokens[0]) {
+            $tokens[] = $no_prefix;
+        }
+
+        return array_values(array_unique(array_filter($tokens)));
     }
 
     protected static function build_video_post_title( \WP_Post $post, string $focus, string $model_name ): string {
