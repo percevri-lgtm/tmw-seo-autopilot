@@ -847,23 +847,38 @@ class Core {
             return;
         }
 
-        // If we've already adjusted this title once, never touch it again.
-        if ( get_post_meta( $post_id, '_tmwseo_video_title_locked', true ) ) {
+        $original       = trim( (string) $post->post_title );
+        $too_long       = mb_strlen( $original ) > 110;
+        $has_brand_tail = stripos( $original, 'Only on Top-Models.Webcam' ) !== false;
+
+        // If we've already adjusted this title once, never touch it again unless it's clearly legacy/too long.
+        if ( get_post_meta( $post_id, '_tmwseo_video_title_locked', true ) && ! ( $too_long || $has_brand_tail ) ) {
             return;
         }
 
         $existing_focus = trim( (string) get_post_meta( $post_id, 'rank_math_focus_keyword', true ) );
-        if ( $existing_focus !== '' ) {
+        if ( $existing_focus !== '' && ! $too_long && ! $has_brand_tail ) {
             return;
         }
 
         $focus      = trim( (string) $focus );
         $model_name = trim( (string) $model_name );
-        if ( $focus === '' ) {
+        if ( $focus === '' || $model_name === '' ) {
             return;
         }
 
-        $new_title = self::build_video_post_title( $post, $focus, $model_name );
+        $title_seed  = absint( $post_id ?: crc32( $model_name ) );
+        $numbers     = [ 3, 4, 5, 6, 7, 8, 9 ];
+        $power_words = [ 'Must-See', 'Exclusive', 'Top', 'Prime' ];
+        $number      = $numbers[ $title_seed % count( $numbers ) ];
+        $power       = $power_words[ $title_seed % count( $power_words ) ];
+
+        $new_title = sprintf(
+            'Cam Model %s — %d %s Live Highlights',
+            $model_name,
+            $number,
+            $power
+        );
         $new_title = trim( (string) $new_title );
 
         // Lock immediately to prevent re-entrancy when wp_update_post triggers save_post again.
@@ -898,7 +913,10 @@ class Core {
             return;
         }
 
-        if ( get_post_meta( $post->ID, '_tmwseo_slug_locked', true ) ) {
+        $original_slug = (string) $post->post_name;
+        $too_long      = mb_strlen( $original_slug ) > 80;
+
+        if ( get_post_meta( $post->ID, '_tmwseo_slug_locked', true ) && ! $too_long ) {
             return;
         }
 
@@ -907,7 +925,7 @@ class Core {
             return;
         }
 
-        if ( strpos( $post->post_name, $slug_focus ) !== false ) {
+        if ( strpos( $original_slug, $slug_focus ) !== false && ! $too_long ) {
             update_post_meta( $post->ID, '_tmwseo_slug_locked', 1 );
             return;
         }
