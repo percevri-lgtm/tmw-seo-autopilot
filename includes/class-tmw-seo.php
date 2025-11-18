@@ -2,6 +2,8 @@
 namespace TMW_SEO;
 if (!defined('ABSPATH')) exit;
 
+use TMW_SEO\Media\Image_Meta_Generator;
+
 class Core {
     const TAG = '[TMW-SEO-GEN]';
     const POST_TYPE = 'model';
@@ -493,6 +495,16 @@ class Core {
     }
     
     protected static function update_featured_image_meta(int $post_id, string $name): void {
+        $post = get_post($post_id);
+        if (!$post) {
+            return;
+        }
+
+        if (in_array($post->post_type, self::video_post_types(), true)) {
+            Image_Meta_Generator::maybe_update_featured_image_meta($post_id);
+            return;
+        }
+
         $thumb_id = (int) get_post_thumbnail_id($post_id);
         if (!$thumb_id) {
             return;
