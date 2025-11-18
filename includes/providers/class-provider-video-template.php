@@ -12,110 +12,78 @@ class VideoTemplate {
         $focus = trim($c['focus'] ?? Core::video_focus($name));
         $brand = $c['brand'] ?? ($c['site'] ?: 'Top Models Webcam');
 
-        // Extra keywords: keep max 4 and use them everywhere (title, headings, body).
+        // Extra keywords from LJ / tags
         $extras   = array_values(array_slice($c['extras'] ?? [], 0, 4));
         $keywords = array_merge([$focus], $extras);
 
-        // Normalise extras so we can safely reference indices.
-        $extra_mentions = $extras;
-        while (count($extra_mentions) < 4) {
-            $extra_mentions[] = '';
-        }
-        $extra_one   = $extra_mentions[0] ?: 'live cam model';
-        $extra_two   = $extra_mentions[1] ?: 'webcam model profile';
-        $extra_three = $extra_mentions[2] ?: 'live webcam chat';
-        $extra_four  = $extra_mentions[3] ?: '';
-
-        // --- Title: focus keyword first + a short extra keyword and power word number ---
+        // Light randomisation for numbers & power words
         $title_seed  = absint(($c['video_id'] ?? 0) ?: crc32($name));
         $numbers     = [3, 4, 5, 6, 7, 8, 9];
+        $power_words = ['Exclusive', 'Prime', 'Top', 'Essential'];
+        $number      = $numbers[$title_seed % count($numbers)];
+        $power       = $power_words[$title_seed % count($power_words)];
 
-        // Use only power words RankMath recognises.
-        $power_words = ['Amazing', 'Best', 'Ultimate', 'Exclusive'];
-
-        $number = $numbers[$title_seed % count($numbers)];
-        $power  = $power_words[$title_seed % count($power_words)];
-
-        // Use first extra keyword in title (Title Case) to keep it strong but still targeted.
-        $extra_title = $extra_one ? ucwords($extra_one) : $power . ' Live';
-
-        // Example:
-        //   Cam Model Anisyia — Black Hair Webcam Model (7 Amazing Highlights)
+        // SEO title (used by RankMath)
         $title = sprintf(
-            '%s — %s (%d %s Highlights)',
+            '%s — %s (%d %s Live Highlights)',
             $focus,
-            $extra_title,
+            $extras[0] ?? 'Black Hair Webcam Model',
             $number,
             $power
         );
 
-        // --- Meta description: mention focus + 2 extras, keep it clean and click-friendly ---
+        $descriptor = $extras[0] ?? 'webcam model';
+
         $meta = sprintf(
-            '%s — %s in %d %s live highlights on %s. %s and %s vibes with quick links to live chat and profile.',
+            '%s — %s in %d %s live highlights on %s. %s and cam girl live vibes with quick links to live chat and profile.',
             $focus,
             $name,
             $number,
             strtolower($power),
             $brand,
-            $extra_one,
-            $extra_two ?: $extra_one
+            $descriptor
         );
 
-        // --- Headings ---
-        // Intro heading: do NOT repeat the full focus keyword here (helps lower density).
-        $intro_heading = 'Intro — Video Overview';
+        // Neutral headings so we don’t spam the keyword
+        $intro_heading      = 'Intro — Video Overview';
+        $highlights_heading = 'Highlights & Live Moments';
+        $faq_heading        = 'FAQ — ' . $name . ' webcam profile & show';
 
-        // Keep one H2 with the focus keyword so RankMath sees it in a subheading.
-        if ($extra_two && $extra_two !== $extra_one) {
-            $highlights_heading = sprintf('Highlights — %s & %s', $focus, $extra_two);
-        } else {
-            $highlights_heading = 'Highlights — ' . $focus;
-        }
+        $extra_mentions = array_slice($extras, 0, 3);
+        $extra_one      = $extra_mentions[0] ?? 'black hair webcam model';
+        $extra_two      = $extra_mentions[1] ?? 'cam girl live';
+        $extra_three    = $extra_mentions[2] ?? 'dancing webcam model';
 
-        if ($extra_three && $extra_three !== $extra_one && $extra_three !== $extra_two) {
-            $faq_heading = sprintf('FAQ — %s, %s & live chat', $name, $extra_three);
-        } else {
-            $faq_heading = sprintf('FAQ — %s webcam profile & show', $name);
-        }
-
-        // --- Short bridge paragraph between H1 and first H2 ---
-        $bridge = sprintf(
-            '%s offers %d %s live highlights in one quick reel, blending %s and %s moments with fast jumps into live chat on %s.',
-            $name,
+        // FIRST sentence: must start with the focus keyword for RankMath.
+        // This should still read like normal text.
+        $lead_focus = $focus !== '' ? $focus : $name;
+        $lead = sprintf(
+            '%s offers %d %s live highlights in one quick reel, blending %s and %s vibes with fast jumps into live chat on Jasmin.',
+            $lead_focus,
             $number,
             strtolower($power),
             $extra_one,
-            $extra_two ?: $extra_one,
-            $brand
+            $extra_two
         );
 
-        // --- Body copy ---
-        $lead = sprintf(
-            '%s starts with polished pacing so the focus keyword shows up right away alongside %s cues about how to jump from this reel into live chat.',
-            $name,
-            $extra_one
-        );
-
+        // Intro body – all human-readable, no SEO jargon in the visible text
         $intro_paragraphs = [
             sprintf(
-                'This intro frames %s as a %s who balances camera angles, soft lighting, and calm narration. Each opening beat hints at the %d %s live highlights promised in the title, making it clear that this page is about curated moments rather than explicit scenes.',
+                'From the first seconds, %s keeps the camera steady and the lighting soft, so viewers can settle in and understand the mood of the room. Each opening beat hints at the %d live highlights promised in the title, making it clear that this reel is all about carefully chosen moments instead of random cuts.',
                 $name,
-                $extra_one,
-                $number,
-                strtolower($power)
+                $number
             ),
             sprintf(
-                '%s explains how the highlight reel links to live chat without repeating the model page. Viewers get direction on when to click the deep link, how to queue questions, and why the %s keeps the vibe friendly and PG-13 while still feeling like a personal invitation.',
-                $name,
-                $extra_two
+                '%s talks viewers through how this highlight reel connects to live chat, without simply repeating what is already written on the model profile. People see exactly when to click through, how to line up questions, and what kind of welcome they can expect once the room goes live.',
+                $name
             ),
             sprintf(
-                'Early shots reference the hook, showing how playlists, set design, and the warm color wash echo what happens in the full show. The pacing stays brisk so that the main keyword never gets buried, and the description keeps returning to %s and %s style cues.',
+                'Early shots echo the main hook of the show: playlists, room design, and that warm color wash that feels instantly familiar to regulars. The pacing stays brisk so the main phrase that people search for never feels forced, and the description naturally circles back to %s and %s details.',
                 $extra_one,
                 $extra_three
             ),
             sprintf(
-                'Fans reading from %s will notice navigation tips that point toward profile updates, schedule banners, and the latest highlight count. By keeping sentences short and descriptive, the intro keeps search-friendly wording while sounding like guidance from %s directly.',
+                'Fans arriving from %s will recognize small navigation hints tucked into the narration. Short lines point toward profile updates, schedule banners, and the latest highlight count. The text stays clear and conversational, as if %s is guiding a new friend through the page step by step.',
                 $site ?: 'the site',
                 $name
             ),
@@ -123,63 +91,71 @@ class VideoTemplate {
 
         $highlight_paragraphs = [
             sprintf(
-                'The highlights section dives into composition. Close-ups of expressions and quick cuts to outfit details show how %s uses subtle gestures to hold attention. This is where the main keyword reappears, paired with %s so RankMath registers natural secondary phrases.',
-                $name,
-                $extra_two
-            ),
-            sprintf(
-                'Midway through the reel, the soundtrack softens and the lighting shifts to a cooler palette. %s narrates each adjustment, noting which moves translate to live chat and how viewers can expect the same pacing in private while keeping all language clean and approachable.',
+                'The highlight section focuses on composition. Close-ups of expressions and quick cuts to outfit details show how %s uses small gestures and eye contact to keep attention on the screen. Every change of angle has a purpose, whether it is to show a reaction, an outfit detail, or just a better view of the room.',
                 $name
             ),
             sprintf(
-                'Another highlight follows the countdown moments before a live session starts. The camera lingers on setup details, letting %s remind viewers to keep notifications on and to bookmark the %s page for quick access when energy ramps up.',
+                'Halfway through the reel, the soundtrack softens and the lighting cools down. %s mentions these shifts out loud, explaining which parts of the show work best for relaxed chat and which moments usually lead into more energetic segments when the room is full.',
+                $name
+            ),
+            sprintf(
+                'Another segment follows the countdown just before a live session starts. The camera lingers on setup details and chat reactions, while %s reminds viewers to keep notifications on and to bookmark the %s page so they can drop in right as the energy peaks.',
                 $name,
                 $brand
             ),
             sprintf(
-                'A penultimate chapter links directly to the model profile%s, summarizing wardrobe polls and recent fan-favorite segments. It repeats the key phrase naturally, aligning on-page text with the chosen focus keyword while keeping the description anchored in SFW language.',
+                'A later chapter links back to the model profile%s. Here the narration calls out wardrobe polls, recent fan favorites, and the kind of themes that keep coming back in shows, giving people a sense of what they will see if they follow the profile regularly.',
                 ! empty($c['model_permalink']) ? ' at ' . esc_url($c['model_permalink']) : ''
             ),
             sprintf(
-                'The final highlight revisits the %s tone of the reel. %s thanks supporters, mentions that %s look-inspired requests are welcome in chat, and directs everyone toward the call-to-action link without sounding salesy.',
-                strtolower($power),
+                'The final highlight slows everything down again. %s thanks supporters, invites simple look-inspired requests based on that %s style, and gently nudges everyone toward the call-to-action link, keeping the tone friendly instead of pushy.',
                 $name,
-                $extra_four ?: $extra_one
+                $extra_one
             ),
         ];
-
-        // Build a human-readable list for the FAQ "tags" answer.
-        $tag_bits   = array_filter([$extra_one, $extra_two, $extra_three, $extra_four]);
-        $tag_phrase = implode(', ', $tag_bits);
 
         $faq = [
             [
                 sprintf('How do I join %s live chat from this highlight page?', $name),
-                sprintf('Use the deep link near the title or the brand button below; both routes jump straight into the room where the pacing matches these %d %s live highlights.', $number, strtolower($power)),
+                sprintf(
+                    'Use the deep link near the title or the branded button below; both take you straight into the room where the pace and atmosphere match these %d %s live highlights.',
+                    $number,
+                    strtolower($power)
+                ),
             ],
             [
-                sprintf('What vibe do these highlights show for %s?', $name),
-                sprintf('Expect a mix of soft lighting, eye contact, and relaxed smiles. The tone is closer to a %s than a scripted clip, keeping everything SFW and welcoming to new viewers.', $extra_one),
+                sprintf('What kind of vibe do these highlights show for %s?', $name),
+                sprintf(
+                    'Expect soft lighting, plenty of eye contact, and relaxed smiles. The overall feel is closer to a cosy %s session than a scripted clip, making it easy for new viewers to settle in.',
+                    $extra_one
+                ),
             ],
             [
-                sprintf('Which tags influence this video write-up?', $name),
-                $tag_phrase
-                    ? sprintf('The content blends the focus keyword with phrases like %s so the description mirrors the tags without repeating the exact model page language.', $tag_phrase)
-                    : sprintf('The content blends the focus keyword with supporting phrases so the description mirrors the tags without repeating the exact model page language.')
+                sprintf('Which tags helped shape this video description?', $name),
+                sprintf(
+                    'The write-up weaves in phrases drawn from tags such as %s, %s, and %s so the page feels aligned with how fans usually describe the show.',
+                    $extra_one,
+                    $extra_two,
+                    $extra_three
+                ),
             ],
             [
-                sprintf('How do the highlights connect to the full profile for %s?', $name),
-                sprintf('Each paragraph references profile links%s and invites readers to bookmark the schedule. That way fans know when the next reel drops and when %s is likely to be online.', ! empty($c['model_permalink']) ? ' at ' . esc_url($c['model_permalink']) : '', $name),
+                sprintf('How does this reel connect to the full profile for %s?', $name),
+                sprintf(
+                    'Throughout the text you will see gentle reminders to visit the profile%s and save the schedule. That way fans know when the next reel is likely to drop and when %s is usually online for live chat.',
+                    ! empty($c['model_permalink']) ? ' at ' . esc_url($c['model_permalink']) : '',
+                    $name
+                ),
             ],
         ];
 
-        // --- Assemble HTML blocks ---
-        $blocks = [
-            ['p', $bridge],
-            ['h2', $intro_heading, ['id' => 'intro']],
-            ['p', $lead],
-        ];
+        // Build block structure
+        $blocks = [];
 
+        // Short paragraph BEFORE any H2 so RankMath sees the focus keyword
+        $blocks[] = ['p', $lead];
+
+        $blocks[] = ['h2', $intro_heading, ['id' => 'intro']];
         foreach ($intro_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -190,13 +166,20 @@ class VideoTemplate {
         }
 
         if (!empty($c['brand_url'])) {
-            $blocks[] = ['raw', '<p class="tmwseo-inline-cta"><a href="' . esc_url($c['brand_url']) . '" rel="sponsored nofollow noopener" target="_blank">Jump into ' . esc_html($name) . ' live chat</a> to see the highlights unfold in real time.</p>'];
+            $blocks[] = [
+                'raw',
+                '<p class="tmwseo-inline-cta"><a href="' . esc_url($c['brand_url']) . '" rel="sponsored nofollow noopener" target="_blank">Join '
+                . esc_html($name)
+                . ' live chat</a> to see the highlights unfold in real time.</p>',
+            ];
         }
 
         $blocks[] = ['h2', $faq_heading, ['id' => 'faq']];
         $blocks   = array_merge($blocks, $this->faq_html($faq));
 
         $content = $this->html($blocks);
+
+        // Keep helpers as no-op so we don’t accidentally stuff keywords
         $content = $this->enforce_word_goal($content, $focus, 650, 800);
         $content = $this->apply_density_guard($content, $focus);
 
@@ -248,13 +231,13 @@ class VideoTemplate {
     }
 
     protected function enforce_word_goal(string $content, string $focus, int $min = 900, int $max = 1200): string {
-        // We accept whatever the base template produces; no extra padding loops.
+        // Accept whatever the base template produces; no padding.
         return $content;
     }
 
     protected function apply_density_guard(string $content, string $focus): string {
-        // Leave content as-is so keyword density stays natural
-        // and RankMath doesn’t flag over-optimization.
+        // Leave content as-is so keyword density stays moderate
+        // and we avoid over-optimization.
         return $content;
     }
 }
