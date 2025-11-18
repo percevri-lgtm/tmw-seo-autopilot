@@ -790,21 +790,18 @@ class Core {
     }
 
     public static function maybe_update_video_title( \WP_Post $post, string $focus ): void {
-        $focus = trim( $focus );
-        if ( $focus === '' ) {
-            return;
-        }
-
-        if ( ! in_array( $post->post_type, self::video_post_types(), true ) ) {
-            return;
-        }
-
-        if ( $post->post_status !== 'publish' ) {
-            return;
-        }
-
         $post_id = $post->ID;
 
+        $post = get_post( $post_id );
+        if (
+            ! ( $post instanceof \WP_Post ) ||
+            ! in_array( $post->post_type, self::video_post_types(), true ) ||
+            $post->post_status !== 'publish'
+        ) {
+            return;
+        }
+
+        // If we've already adjusted this title once, never touch it again.
         if ( get_post_meta( $post_id, '_tmwseo_video_title_locked', true ) ) {
             return;
         }
@@ -814,27 +811,24 @@ class Core {
             return;
         }
 
-        $fresh_post = get_post( $post_id );
-        if ( ! $fresh_post instanceof \WP_Post ) {
+        $focus = trim( (string) $focus );
+        if ( $focus === '' ) {
             return;
         }
 
-        $original_title = (string) $fresh_post->post_title;
-        $new_title      = $focus;
+        $original_title = (string) $post->post_title;
 
-        if ( $original_title !== '' ) {
-            if ( stripos( $original_title, $focus ) === 0 ) {
-                $new_title = $original_title;
-            } elseif ( stripos( $original_title, $focus ) === false ) {
-                $new_title = $focus . ' — ' . $original_title;
-            }
+        if ( stripos( $original_title, $focus ) !== false ) {
+            $new_title = $original_title;
+        } else {
+            $new_title = $focus . ' — ' . $original_title;
         }
 
         if ( $new_title !== $original_title ) {
             wp_update_post(
                 [
                     'ID'         => $post_id,
-                    'post_title' => sanitize_text_field( $new_title ),
+                    'post_title' => $new_title,
                 ]
             );
         }
@@ -844,11 +838,13 @@ class Core {
         if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
             error_log(
                 sprintf(
-                    '%s [VIDEO TITLE] #%d old="%s" new="%s"',
+                    '%s [VIDEO-TITLE] #%d type=%s old="%s" new="%s" focus="%s"',
                     self::TAG,
                     $post_id,
+                    $post->post_type,
                     $original_title,
-                    $new_title
+                    $new_title,
+                    $focus
                 )
             );
         }
