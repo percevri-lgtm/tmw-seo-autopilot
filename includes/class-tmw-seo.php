@@ -55,15 +55,29 @@ class Core {
     public static function generate_for_video(int $video_id, array $args = []): array {
         $args = wp_parse_args($args, [
             'strategy' => 'template',
+            'force'    => false,
         ]);
+        $force = ! empty( $args['force'] );
         $post = get_post($video_id);
         if (!$post || !in_array($post->post_type, self::video_post_types(), true)) {
             return ['ok' => false, 'message' => 'Not a video'];
         }
 
         $existing_focus = trim((string) get_post_meta($post->ID, 'rank_math_focus_keyword', true));
-        if ($existing_focus !== '') {
-            return ['ok' => false, 'message' => 'RankMath focus keyword already set'];
+        if ( ! $force && $existing_focus !== '' ) {
+            return ['ok' => false, 'message' => 'Skipped: focus keyword already set.'];
+        }
+
+        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
+            error_log(
+                sprintf(
+                    '%s [RM-VIDEO] post#%d opts=%s existing_focus=%s',
+                    self::TAG,
+                    $video_id,
+                    wp_json_encode( $args ),
+                    $existing_focus !== '' ? 'yes' : 'no'
+                )
+            );
         }
 
         $name = self::detect_model_name_from_video($post);
@@ -89,7 +103,9 @@ class Core {
             ]
         );
 
-        self::maybe_update_video_title( $post, $rm_video['focus'], $name );
+        $focus_for_video = $existing_focus !== '' ? $existing_focus : $rm_video['focus'];
+
+        self::maybe_update_video_title( $post, $focus_for_video, $name );
 
         $ctx_video['focus'] = $rm_video['focus'];
         if (!empty($rm_video['extras'])) {
@@ -108,9 +124,9 @@ class Core {
         self::write_all($video_id, $payload_video, 'VIDEO', true, $ctx_video);
         self::write_all($model_id, $payload_model, 'MODEL', true, $ctx_model);
 
-        self::maybe_update_video_slug($post, $rm_video['focus']);
+        self::maybe_update_video_slug($post, $focus_for_video);
 
-        self::update_rankmath_meta($post->ID, $rm_video, true);
+        self::update_rankmath_meta($post->ID, $rm_video, true, $existing_focus !== '' && $force);
 
         $looks         = self::first_looks( $video_id );
         $tag_keywords  = self::safe_model_tag_keywords( $looks );
@@ -759,9 +775,15 @@ class Core {
         ];
     }
 
-    public static function update_rankmath_meta(int $post_id, array $rm, bool $protect_manual = false): void {
-        $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'] ?? [])));
-        update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $kw));
+    public static function update_rankmath_meta(int $post_id, array $rm, bool $protect_manual = false, bool $preserve_focus = false): void {
+        $existing_focus = trim((string) get_post_meta($post_id, 'rank_math_focus_keyword', true));
+
+        if ( $preserve_focus && $existing_focus !== '' ) {
+            $kw = array_filter(array_map('trim', explode(',', (string) $existing_focus)));
+        } else {
+            $kw = array_filter(array_map('trim', array_merge([$rm['focus']], $rm['extras'] ?? [])));
+            update_post_meta($post_id, 'rank_math_focus_keyword', implode(', ', $kw));
+        }
 
         $existing_title = get_post_meta($post_id, 'rank_math_title', true);
         $existing_desc  = get_post_meta($post_id, 'rank_math_description', true);
@@ -778,7 +800,8 @@ class Core {
         }
 
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
-        error_log(self::TAG . " [RM] set focus='" . $rm['focus'] . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
+        $focus_for_log = $preserve_focus && $existing_focus !== '' ? $existing_focus : $rm['focus'];
+        error_log(self::TAG . " [RM] set focus='" . $focus_for_log . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
     }
 
     protected static function is_old_video_title(string $title, string $focus): bool {

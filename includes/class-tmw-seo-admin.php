@@ -192,14 +192,23 @@ class Admin {
         $post_id = (int)($_GET['post_id'] ?? 0);
         if (!$post_id || !current_user_can('edit_post', $post_id)) wp_die('No permission');
         check_admin_referer('tmwseo_generate_now_' . $post_id);
-        $existing_focus = get_post_meta( $post_id, 'rank_math_focus_keyword', true );
-        if ( ! empty( $existing_focus ) ) {
-            update_post_meta( $post_id, '_tmwseo_last_message', 'Skipped: RankMath focus keyword already set' );
-            wp_safe_redirect(get_edit_post_link($post_id, ''));
-            exit;
+
+        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
+            error_log(
+                sprintf(
+                    '[TMW-SEO-ADMIN] Manual video generate_now for post #%d',
+                    $post_id
+                )
+            );
         }
 
-        $res = \TMW_SEO\Core::generate_for_video($post_id, ['strategy' => 'template']);
+        $res = \TMW_SEO\Core::generate_for_video(
+            $post_id,
+            [
+                'strategy' => 'template',
+                'force'    => true,
+            ]
+        );
         update_post_meta($post_id, '_tmwseo_last_message', $res['ok'] ? 'Generated via Manual Run' : 'Failed: ' . $res['message']);
         wp_safe_redirect(get_edit_post_link($post_id, ''));
         exit;
