@@ -350,7 +350,7 @@ class Core {
     }
 
     public static function video_focus(string $name): string {
-        return sprintf('%s live cam highlights', $name);
+        return sprintf('Cam Model %s', $name);
     }
 
     protected static function build_ctx_model(int $model_id, string $name, array $args): array {
