@@ -59,7 +59,7 @@ class VideoSEO {
             ]
         );
 
-        Core::maybe_update_video_title( $post, $rm['focus'] );
+        Core::maybe_update_video_title( $post, $rm['focus'], $model_name );
 
         Core::maybe_update_video_slug( $post, $rm['focus'] );
 
