@@ -11,6 +11,7 @@ class Media {
     public static function boot() {
         add_action('set_post_thumbnail', [__CLASS__, 'on_set_thumb'], 10, 3);
         add_action('add_attachment', [__CLASS__, 'on_add_attachment']);
+        add_action('save_post_' . Core::VIDEO_PT, [__CLASS__, 'on_save_video'], 10, 3);
     }
 
     public static function on_set_thumb($post_id, $thumb_id, $meta = null) {
@@ -27,6 +28,58 @@ class Media {
         $att = get_post($att_id);
         if ($att && 'attachment' === $att->post_type && empty($att->post_title)) {
             wp_update_post(['ID' => $att_id, 'post_title' => basename($att->guid)]);
+        }
+    }
+
+    public static function on_save_video($post_id, $post, $update) {
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+        if (!is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST) || (defined('DOING_CRON') && DOING_CRON)) {
+            return;
+        }
+        if (!$post || $post->post_type !== Core::VIDEO_PT) {
+            return;
+        }
+        $thumb_id = get_post_thumbnail_id($post_id);
+        if (!$thumb_id) {
+            return;
+        }
+        $focus = trim((string) get_post_meta($post_id, 'rank_math_focus_keyword', true));
+        $title = get_the_title($post_id);
+        $parts_for_alt = array_filter(array_unique(array_map('trim', [$focus, $title])));
+        if (empty($parts_for_alt)) {
+            return;
+        }
+        $alt_text = implode(' — ', $parts_for_alt);
+        $attachment = get_post($thumb_id);
+        if (!$attachment) {
+            return;
+        }
+        $current_alt = get_post_meta($thumb_id, '_wp_attachment_image_alt', true);
+        if ('' === trim((string) $current_alt)) {
+            update_post_meta($thumb_id, '_wp_attachment_image_alt', $alt_text);
+        }
+        $attachment_title = $alt_text;
+        $attachment_caption = $focus !== '' ? sprintf('%s – highlight thumbnail', $focus) : $title;
+        $attachment_description = $focus !== ''
+            ? sprintf('%s, thumbnail for %s on Top Models Webcam.', $focus, $title)
+            : sprintf('Thumbnail image for %s on Top Models Webcam.', $title);
+        $update_args = ['ID' => $thumb_id];
+        if ('' === trim((string) $attachment->post_title)) {
+            $update_args['post_title'] = $attachment_title;
+        }
+        if ('' === trim((string) $attachment->post_excerpt)) {
+            $update_args['post_excerpt'] = $attachment_caption;
+        }
+        if ('' === trim((string) $attachment->post_content)) {
+            $update_args['post_content'] = $attachment_description;
+        }
+        if (count($update_args) > 1) {
+            wp_update_post($update_args);
         }
     }
 
