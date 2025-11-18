@@ -1,6 +1,8 @@
 <?php
 namespace TMW_SEO;
 
+use TMW_SEO\Media\Image_Meta_Generator;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -64,7 +66,7 @@ class Media {
             return;
         }
 
-        $thumb_id = self::resolve_video_thumbnail_id($post);
+        $thumb_id = (int) get_post_thumbnail_id($post_id);
         if (!$thumb_id) {
             return;
         }
@@ -82,142 +84,16 @@ class Media {
             return;
         }
 
-        $focus_keyword = self::focus_keyword_for_video($video);
-        $extras = self::extra_keywords_for_video($video);
-        $primary = $focus_keyword !== '' ? $focus_keyword : wp_strip_all_tags($video->post_title);
-        $secondary = $extras[0] ?? (Core::brand_order()[0] ?? '');
+        Image_Meta_Generator::maybe_update_featured_image_meta($video->ID, $thumb_id);
 
-        $alt_text = $primary;
-        if ($secondary && stripos($primary, $secondary) === false) {
-            $alt_text = trim($primary . ' — ' . $secondary);
+        $url = wp_get_attachment_image_url($thumb_id, 'full');
+        if ($url) {
+            update_post_meta($video->ID, 'rank_math_facebook_image', esc_url_raw($url));
+            update_post_meta($video->ID, 'rank_math_twitter_image', esc_url_raw($url));
         }
 
-        $seo_title = trim((string) get_post_meta($video->ID, 'rank_math_title', true));
-        $clean_video_title = self::clean_video_title($seo_title !== '' ? $seo_title : $video->post_title);
-        $attachment_title = $clean_video_title !== '' ? $clean_video_title : $alt_text;
-
-        $caption = $focus_keyword !== ''
-            ? sprintf('%s preview thumbnail for this live video.', $focus_keyword)
-            : sprintf('%s preview thumbnail.', $clean_video_title ?: 'Video');
-
-        $descriptor = $extras[0] ?? strtolower(Core::brand_order()[0] ?? '');
-        $descriptor = $descriptor ?: 'webcam highlight';
-        $description = $focus_keyword !== ''
-            ? sprintf(
-                '%s promo thumbnail showing a %s vibe. Short, PG-13 highlight reel preview.',
-                $focus_keyword,
-                $descriptor
-            )
-            : sprintf(
-                'Promo thumbnail from %s. Short highlight reel preview.',
-                $clean_video_title ?: 'this live video'
-            );
-
-        $updates = ['ID' => $thumb_id];
-
-        $current_alt = get_post_meta($thumb_id, '_wp_attachment_image_alt', true);
-        if ('' === trim((string) $current_alt) && $alt_text !== '') {
-            update_post_meta($thumb_id, '_wp_attachment_image_alt', $alt_text);
+        if (defined('TMW_DEBUG') && TMW_DEBUG) {
+            error_log(self::TAG . " filled thumbnail meta for video {$video->ID} / attachment {$thumb_id}");
         }
-
-        if ('' === trim((string) $attachment->post_title) && $attachment_title !== '') {
-            $updates['post_title'] = $attachment_title;
-        }
-        if ('' === trim((string) $attachment->post_excerpt) && $caption !== '') {
-            $updates['post_excerpt'] = $caption;
-        }
-        if ('' === trim((string) $attachment->post_content) && $description !== '') {
-            $updates['post_content'] = $description;
-        }
-
-        if (count($updates) > 1) {
-            wp_update_post($updates);
-        }
-
-        error_log(self::TAG . " filled thumbnail meta for video {$video->ID} / attachment {$thumb_id}");
-    }
-
-    private static function resolve_video_thumbnail_id(\WP_Post $video): int {
-        $thumb_id = (int) get_post_thumbnail_id($video->ID);
-        if ($thumb_id) {
-            return $thumb_id;
-        }
-
-        foreach (self::LIVEJASMIN_THUMB_META_KEYS as $key) {
-            $raw = get_post_meta($video->ID, $key, true);
-            if (empty($raw)) {
-                continue;
-            }
-
-            $candidate_id = 0;
-            $candidate_url = '';
-
-            if (is_array($raw)) {
-                $candidate_id = isset($raw['id']) ? (int) $raw['id'] : 0;
-                $candidate_url = is_string($raw['url'] ?? '') ? $raw['url'] : '';
-            } elseif (is_numeric($raw)) {
-                $candidate_id = (int) $raw;
-            } elseif (is_string($raw)) {
-                $candidate_url = $raw;
-            }
-
-            if ($candidate_id > 0) {
-                return $candidate_id;
-            }
-
-            if ($candidate_url !== '') {
-                $resolved = attachment_url_to_postid($candidate_url);
-                if ($resolved) {
-                    return (int) $resolved;
-                }
-            }
-        }
-
-        return 0;
-    }
-
-    private static function focus_keyword_for_video(\WP_Post $video): string {
-        $raw = trim((string) get_post_meta($video->ID, 'rank_math_focus_keyword', true));
-        if ($raw !== '') {
-            $parts = array_filter(array_map('trim', explode(',', $raw)));
-            if (!empty($parts)) {
-                return $parts[0];
-            }
-            return $raw;
-        }
-
-        $name = Core::detect_model_name_from_video($video);
-        if ($name === '') {
-            $name = wp_strip_all_tags($video->post_title);
-        }
-
-        return Core::video_focus($name);
-    }
-
-    private static function extra_keywords_for_video(\WP_Post $video): array {
-        $meta = get_post_meta($video->ID, '_tmwseo_video_tag_keywords', true);
-        if (is_array($meta) && !empty($meta)) {
-            return array_values(array_filter(array_map('sanitize_text_field', $meta)));
-        }
-
-        $looks = Core::first_looks($video->ID);
-        return Core::safe_model_tag_keywords($looks);
-    }
-
-    private static function clean_video_title(string $title): string {
-        $clean = wp_strip_all_tags($title);
-        $site = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        $patterns = [
-            'Top Models Webcam',
-            'Top-Models.Webcam',
-            $site,
-        ];
-        foreach ($patterns as $pattern) {
-            if ($pattern) {
-                $clean = trim(str_ireplace($pattern, '', $clean));
-            }
-        }
-
-        return trim(preg_replace('#\s+-\s+$#', '', $clean));
     }
 }

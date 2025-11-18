@@ -18,6 +18,7 @@ require_once TMW_SEO_PATH . 'includes/class-tmw-seo-cli.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-rankmath.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-videoseo.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-automations.php';
+require_once TMW_SEO_PATH . 'includes/media/class-image-meta-generator.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-media.php';
 require_once TMW_SEO_PATH . 'includes/providers/class-provider-template.php';
 require_once TMW_SEO_PATH . 'includes/providers/class-provider-openai.php';
