@@ -25,7 +25,8 @@ class Template {
 
         $descriptor = $extras[0] ?? 'webcam model';
         $meta = sprintf(
-            '%s in %d %s live highlights on %s. %s vibes with quick links to live chat and profile.',
+            '%s — %s in %d %s live highlights on %s. %s vibes with quick links to live chat and profile.',
+            $focus,
             $name,
             $number,
             strtolower($power),
@@ -33,8 +34,8 @@ class Template {
             $descriptor
         );
 
-        $intro_heading      = 'Intro — ' . $name . ' live cam highlights';
-        $highlights_heading = 'Highlights — ' . $name . ' on live cam';
+        $intro_heading      = 'Intro — ' . $focus;
+        $highlights_heading = 'Highlights — ' . $focus;
         $faq_heading        = 'FAQ — ' . $name . ' webcam profile & show';
 
         $extra_mentions = array_slice($extras, 0, 3);
