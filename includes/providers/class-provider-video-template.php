@@ -5,36 +5,42 @@ if (!defined('ABSPATH')) exit;
 use TMW_SEO\Core;
 
 class VideoTemplate {
-    /** VIDEO: returns ['title','meta','keywords'=>[5],'content'] */
-    public function generate_video(array $c): array {
-        $name  = $c['name'];
-        $site  = $c['site'];
-        $focus = trim($c['focus'] ?? Core::video_focus($name));
-        $brand = $c['brand'] ?? ($c['site'] ?: 'Top Models Webcam');
 
-        $extras   = array_values(array_slice($c['extras'] ?? [], 0, 4));
+    /**
+     * VIDEO: returns ['title','meta','keywords'=>[5],'content']
+     */
+    public function generate_video(array $c): array {
+        $name  = isset($c['name']) ? $c['name'] : '';
+        $site  = isset($c['site']) ? $c['site'] : '';
+        $focus = trim($c['focus'] ?? Core::video_focus($name));
+        $brand = isset($c['brand']) ? $c['brand'] : ($site ?: 'Top Models Webcam');
+
+        $extras   = isset($c['extras']) && is_array($c['extras'])
+            ? array_values(array_slice($c['extras'], 0, 4))
+            : [];
         $keywords = array_merge([$focus], $extras);
 
-        // Use a stable number but always keep it small (good for titles)
+        // Stable small number for title
         $title_seed = absint(($c['video_id'] ?? 0) ?: crc32($name));
         $numbers    = [3, 4, 5, 6, 7, 8, 9];
         $number     = $numbers[$title_seed % count($numbers)];
 
         /**
-         * IMPORTANT for RankMath:
-         * - Focus keyword at the beginning.
-         * - Includes "Best" and "Amazing" (power + positive sentiment words).
-         * - Includes a number.
+         * RankMath-friendly title:
+         * - Focus keyword at the beginning
+         * - Includes positive + power word ("Amazing", "Best")
+         * - Includes a number
          */
         $title = sprintf(
-            '%s — %d Best & Amazing Live Highlights',
+            '%s — %d Amazing & Best Live Highlights',
             $focus,
             $number
         );
 
         $descriptor = $extras[0] ?? 'webcam model';
+
         $meta = sprintf(
-            '%s — %s in %d best and amazing live highlights on %s. %s vibes with quick links to live chat and profile.',
+            '%s — %s in %d amazing & best live highlights on %s. %s vibes with quick links to live chat and profile.',
             $focus,
             $name,
             $number,
@@ -42,7 +48,7 @@ class VideoTemplate {
             $descriptor
         );
 
-        // Headings keep the focus keyword in H2s for RankMath
+        // Headings keep focus keyword in H2s for RankMath
         $intro_heading      = 'Intro — ' . $focus;
         $highlights_heading = 'Highlights — ' . $focus;
         $faq_heading        = 'FAQ — ' . $name . ' webcam profile & show';
@@ -61,7 +67,7 @@ class VideoTemplate {
 
         $intro_paragraphs = [
             sprintf(
-                'This intro frames %s as a %s who balances camera angles, soft lighting, and calm narration. Each opening beat hints at the %d best live highlights promised in the title, making it clear that this page is about curated moments rather than explicit scenes.',
+                'This intro frames %s as a %s who balances camera angles, soft lighting, and calm narration. Each opening beat hints at the %d amazing live highlights promised in the title, making it clear that this page is about curated moments rather than explicit scenes.',
                 $name,
                 $extra_one,
                 $number
@@ -105,7 +111,7 @@ class VideoTemplate {
                 $focus
             ),
             sprintf(
-                'The final highlight revisits the best-and-amazing tone of the reel. %s thanks supporters, mentions that %s look-inspired requests are welcome in chat, and directs everyone toward the call-to-action link without sounding salesy.',
+                'The final highlight revisits the amazing-and-best tone of the reel. %s thanks supporters, mentions that %s look-inspired requests are welcome in chat, and directs everyone toward the call-to-action link without sounding salesy.',
                 $name,
                 $extra_one
             ),
@@ -115,7 +121,7 @@ class VideoTemplate {
             [
                 sprintf('How do I join %s live chat from this highlight page?', $name),
                 sprintf(
-                    'Use the deep link near the title or the brand button below; both routes jump straight into the room where the pacing matches these %d best live highlights.',
+                    'Use the deep link near the title or the brand button below; both routes jump straight into the room where the pacing matches these %d amazing live highlights.',
                     $number
                 ),
             ],
@@ -148,6 +154,7 @@ class VideoTemplate {
             ['h2', $intro_heading, ['id' => 'intro']],
             ['p', $lead],
         ];
+
         foreach ($intro_paragraphs as $p) {
             $blocks[] = ['p', $p];
         }
@@ -160,7 +167,7 @@ class VideoTemplate {
         if (!empty($c['brand_url'])) {
             $blocks[] = [
                 'raw',
-                '<p class="tmwseo-inline-cta"><a href="' . esc_url($c['brand_url']) . '" rel="sponsored nofollow noopener" target="_blank">Jump into ' . esc_html($name) . ' live chat</a> to see the highlights unfold in real time.</p>'
+                '<p class="tmwseo-inline-cta"><a href="' . esc_url($c['brand_url']) . '" rel="sponsored nofollow noopener" target="_blank">Jump into ' . esc_html($name) . ' live chat</a> to see the highlights unfold in real time.</p>',
             ];
         }
 
@@ -179,21 +186,25 @@ class VideoTemplate {
         ];
     }
 
-    /* helpers */
+    /* helpers -------------------------------------------------------------- */
+
     protected function html(array $blocks): string {
         $out = '';
         foreach ($blocks as $b) {
             $tag   = $b[0];
             $txt   = $b[1] ?? '';
             $attrs = $b[2] ?? [];
+
             if ($tag === 'raw') {
                 $out .= $txt;
                 continue;
             }
+
             $attr_html = '';
             foreach ($attrs as $k => $v) {
                 $attr_html .= ' ' . $k . '="' . esc_attr($v) . '"';
             }
+
             if ($tag === 'p') {
                 $out .= '<p' . $attr_html . '>' . esc_html($txt) . '</p>';
             } elseif (in_array($tag, ['h2', 'h3'], true)) {
@@ -219,7 +230,7 @@ class VideoTemplate {
     }
 
     protected function enforce_word_goal(string $content, string $focus, int $min = 900, int $max = 1200): string {
-        // We keep the base template output; RankMath already likes ~600–800 words.
+        // Keep whatever the base template produces; RankMath already likes ~600–800 words.
         return $content;
     }
 
