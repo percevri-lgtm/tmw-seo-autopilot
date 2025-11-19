@@ -18,6 +18,7 @@ require_once TMW_SEO_PATH . 'includes/class-tmw-seo-cli.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-rankmath.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-videoseo.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-automations.php';
+require_once TMW_SEO_PATH . 'includes/class-tmw-seo-image-meta.php';
 require_once TMW_SEO_PATH . 'includes/media/class-image-meta-generator.php';
 require_once TMW_SEO_PATH . 'includes/class-tmw-seo-media.php';
 require_once TMW_SEO_PATH . 'includes/providers/class-provider-template.php';
@@ -28,6 +29,7 @@ add_action('plugins_loaded', function () {
     \TMW_SEO\RankMath::boot();
     \TMW_SEO\VideoSEO::boot();
     \TMW_SEO\Automations::boot();
+    \TMW_SEO\Image_Meta::boot();
     \TMW_SEO\Media::boot();
 });
 
