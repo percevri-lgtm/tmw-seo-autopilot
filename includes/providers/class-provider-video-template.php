@@ -9,7 +9,6 @@ class VideoTemplate {
     public function generate_video(array $c): array {
         $name   = $c['name'];
         $site   = $c['site'] ?: 'Live Cam Stream';
-        $brand  = $c['brand'] ?? $site;
         $focus  = trim($c['focus'] ?? Core::video_focus($name));
         $focus  = $focus !== '' ? $focus : $name;
 
@@ -23,182 +22,110 @@ class VideoTemplate {
         $extras     = array_slice(array_merge($raw_extras, $fallback_extras), 0, 4);
         $keywords   = array_merge([$focus], $extras);
 
-        $title = sprintf(
-            '%s — 5 Captivating %s Highlights & %s Guide',
-            $focus,
-            $extras[0],
-            $extras[1]
-        );
+        $title = sprintf('%s Journey with %s', $focus, $extras[0]);
         if (mb_strlen($title) > 60) {
-            $title = sprintf('%s — 5 Captivating %s Highlights', $focus, $extras[0]);
+            $title = mb_substr($title, 0, 57) . '...';
         }
 
         $meta = sprintf(
-            '%s shows how %s, %s, %s, %s guide lighting cues, pacing, and live chat steps.',
+            '%s welcomes viewers while %s, %s, %s, and %s color the pacing with soft PG-13 cues.',
             $focus,
             $extras[0],
             $extras[1],
             $extras[2],
             $extras[3]
         );
-        $meta_length = mb_strlen($meta);
-        if ($meta_length < 150) {
-            $meta .= ' Calm lighting notes keep it PG-13.';
-            $meta_length = mb_strlen($meta);
-        }
-        if ($meta_length > 160) {
+        if (mb_strlen($meta) > 160) {
             $meta = mb_substr($meta, 0, 157) . '...';
         }
-        // Editors may adjust the WordPress slug manually if they want to echo extra keywords; this generator leaves permalinks untouched.
 
-        $alt_suggestion = sprintf(
-            '%s featuring %s, %s, %s, and %s lighting study',
+        $blocks = [];
+        $intro_one = sprintf(
+            '%s invites viewers into a calm storyline, describing how each beat of the evening will unfold like a guided meditation with pauses for breath and generous smiles. She lets her laughter linger just long enough for people on the other side of the screen to relax their shoulders, exhale slowly, and imagine themselves sharing the same velvet sofa. Gentle context clues explain the pacing, the hand movements, and the promise that nothing rushes the senses, letting anticipation grow naturally. When %s is mentioned, it becomes a metaphor for bright pulses of optimism, warming the edges of the experience without overwhelming the soothing tempo.',
             $focus,
-            $extras[0],
+            $extras[0]
+        );
+        $intro_two = sprintf(
+            'Friends who tune in together see how %s frames the chat as a place for empathy, inviting watchers to describe their own day in just a few calm lines before relaxing into the flow. The guide explains how to set lamplight at home to a honey tone, how to rest elbows on a cushion, and how to listen for the soft inhalations that tell you a surprise grin is coming. Detailed notes compare %s to a moonlit sway that gently closes the eyes of any anxiety, promising that each greeting will feel personal even inside a lively room.',
             $extras[1],
-            $extras[2],
             $extras[3]
         );
-        // ALT suggestion (apply to the featured image or hero still manually): $alt_suggestion
-        // Removed static "Video Preview" box – real player is rendered separately.
-
-        $phrase_limits = [
-            'focus' => ['phrase' => $focus, 'min' => 6, 'max' => 12, 'fallback' => 'the performer'],
-        ];
-        $fallbacks = [
-            'extra_0' => 'this opening groove',
-            'extra_1' => 'this chat rehearsal',
-            'extra_2' => 'this pacing study',
-            'extra_3' => 'this reflective finale',
-        ];
-        foreach ($extras as $idx => $extra) {
-            $phrase_limits['extra_' . $idx] = [
-                'phrase'   => $extra,
-                'min'      => 3,
-                'max'      => 7,
-                'fallback' => $fallbacks['extra_' . $idx] ?? 'this segment',
-            ];
-        }
-        $phrase_counts = array_fill_keys(array_keys($phrase_limits), 0);
-
-        $use_phrase = function (string $key, string $fallback = '') use (&$phrase_counts, $phrase_limits) {
-            if (!isset($phrase_limits[$key])) {
-                return $fallback;
-            }
-            if ($fallback === '') {
-                $fallback = $phrase_limits[$key]['fallback'] ?? '';
-            }
-            if ($phrase_counts[$key] >= $phrase_limits[$key]['max']) {
-                return $fallback;
-            }
-            $phrase_counts[$key]++;
-            return $phrase_limits[$key]['phrase'];
-        };
-
-        $blocks   = [];
-        $intro_one = sprintf(
-            '%s sets the tone for this viewing guide, weaving %s, %s, %s, and %s into a calm welcome that previews the moods ahead. The opening notes describe how she shifts from warm smiles to purposeful gestures, explain when the camera glides past the dressing mirror, and signal when viewers should take a breath before the first highlight cues roll in.',
-            $use_phrase('focus', $focus),
-            $use_phrase('extra_0', $extras[0]),
-            $use_phrase('extra_1', $extras[1]),
-            $use_phrase('extra_2', $extras[2]),
-            $use_phrase('extra_3', $extras[3])
-        );
-
-        $intro_two = sprintf(
-            'Because %s treats each stream like a mini narrative, the second greeting paragraph sets expectations for chapter breaks, mentions when the crew dims the lamps, and cues watchers to note breathing exercises before transitions. It also highlights how the team shares respectful chat etiquette reminders so the experience stays PG-13 while still feeling spontaneous.',
-            $use_phrase('focus', $focus)
+        $intro_bridge_text = sprintf(
+            'A single whisper about %s promises that the later scenes will melt into a mellow glow, so viewers can let their shoulders drop before the first highlight even begins.',
+            $extras[2]
         );
 
         $blocks[] = ['p', $intro_one];
         $blocks[] = ['p', $intro_two];
+        $blocks[] = ['raw', '<div class="intro-bridge">' . esc_html($intro_bridge_text) . '</div>'];
 
-        foreach ($extras as $index => $extra) {
-            if ($index === 0) {
-                $heading_phrase = $use_phrase('extra_0', $extra);
-                $blocks[] = ['h2', sprintf('%s framing tips', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
-                $blocks[] = ['p', sprintf('Stage managers describe how %s draws strength from %s by pairing long glides with steady smiles and relaxed shoulders. Overhead lanterns are feathered toward the floor, giving space for soft shadows while the host references journal notes about breathing rhythm and eye contact.', $use_phrase('focus', $focus), $use_phrase('extra_0', $extra))];
-                $blocks[] = ['p', sprintf('During the first chorus the writing points out that %s becomes a cue for viewers to sit taller and track the gentle sway of the camera crane. The article encourages fans to notice fingertip placement on the mic stand, appreciate the controlled pace, and mirror the slow inhales before the tempo shifts.', $use_phrase('extra_0', $extra))];
-            } elseif ($index === 1) {
-                $heading_phrase = $use_phrase('extra_1', $extra);
-                $blocks[] = ['h2', sprintf('%s hosting cues', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
-                $blocks[] = ['p', sprintf('Writers explain how %s invites the room to settle into %s segments where the host leans toward the lens and practices gentle call-and-response prompts. Lighting dims to a honey color, and crew members tap cue cards that remind everyone to smile between each spoken line.', $use_phrase('focus', $focus), $use_phrase('extra_1', $extra))];
-                $blocks[] = ['p', sprintf('The breakdown shows viewers how %s moments include soft wrist rolls, reassuring nods, and a pause that lets supportive comments surface in the live window. Fans are reminded to keep fingertips relaxed on the keyboard and to note how the host circles back to compassionate humor before moving on.', $use_phrase('extra_1', $extra))];
-            } elseif ($index === 2) {
-                $heading_phrase = $use_phrase('extra_2', $extra);
-                $blocks[] = ['h2', sprintf('%s pacing study', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
-                $blocks[] = ['p', sprintf('Cinematographers linger on each beat whenever %s takes over, allowing %s to describe the choreography in a reflective tone. The script details how the dolly operator counts to five on every push, how the wardrobe shimmer catches low angles, and how the performer keeps expressions bright even while moving slowly.', $use_phrase('extra_2', $extra), $use_phrase('focus', $focus))];
-                $blocks[] = ['p', sprintf('Viewers are urged to stretch their shoulders as %s sections build, keeping the spine tall and noticing how ambient synth notes rise and fall. Notes remind everyone that the host quietly adjusts bracelets and posture to match the groove, which helps the segment feel more intimate without breaking the PG-13 promise.', $use_phrase('extra_2', $extra))];
-            } else {
-                $heading_phrase = $use_phrase('extra_3', $extra);
-                $blocks[] = ['h2', sprintf('%s lightplay notes', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
-                $blocks[] = ['p', sprintf('Crew journals describe how %s is presented with reflective props, letting %s experiment with glints of light that skate across the stage floor. Wide primes capture glittering curtains while assistants adjust dimmers in slow increments so nothing feels rushed.', $use_phrase('extra_3', $extra), $use_phrase('focus', $focus))];
-                $blocks[] = ['p', sprintf('When %s returns later in the set, the article recommends lowering room lights at home and leaning closer to the screen to watch the mirrored movements. It points out how the host rests a palm on the railing, takes a deliberate pause, and then turns toward the audience with a calm grin that anchors the final minutes.', $use_phrase('extra_3', $extra))];
-            }
-        }
+        $blocks[] = ['h2', ucwords($extras[0])];
+        $section1_p1 = sprintf(
+            'The first spotlight explains how %s uses gentle eye contact and playful pauses whenever %s ripples through the narrative, showing fans how to match their breathing to the subtle sway of her hips. She maps out a steady rise and fall with her hands, letting each smile linger so people at home can mirror that patience while counting quietly to four. Commentary reminds everyone to unclench their shoulders, hold eye contact with the screen for a heartbeat, and then release into a playful grin before the next movement.',
+            $focus,
+            $extras[0]
+        );
+        $section1_p2 = sprintf(
+            'Guides describe %s as a radiant breeze that drifts across the scene, suggesting that fans close their eyes for a second to picture the warm glow before opening them to catch every shrug and playful wink. They recommend tapping a finger against the wrist to mimic the relaxed tempo, letting that rhythm spill into the next exchange of smiles.',
+            $extras[0]
+        );
+        $blocks[] = ['p', $section1_p1];
+        $blocks[] = ['p', $section1_p2];
 
-        $blocks[] = ['p', 'Between segments, stagehands tidy cables, wipe mirrors, and pass along warm tea so the performer can keep posture relaxed. The guide suggests viewers stretch wrists, adjust chair height, and mimic the gentle breathing pattern described by the crew to keep their own living rooms aligned with the calm studio cadence.'];
+        $blocks[] = ['h2', ucwords($extras[1])];
+        $section2_p1 = sprintf(
+            'Notes highlight how %s becomes a mindful gathering space, encouraging viewers to type short, kind phrases between sequences and then rest their hands to feel the hush that follows. The coaching explains how to keep the chat gentle, reminding fans to focus on compliments about posture or the sparkle in each laugh instead of racing ahead.',
+            $extras[1]
+        );
+        $section2_p2 = sprintf(
+            'Later chapters slow down to show how breathing between responses keeps the entire room serene before the next wave of commentary arrives. During that pause %s tilts her head toward the lens, offering quiet nods that make remote fans feel included. Viewers are urged to lean back for a few seconds and notice how their own smiles echo hers before they rejoin the conversation.',
+            $focus
+        );
+        $blocks[] = ['p', $section2_p1];
+        $blocks[] = ['p', $section2_p2];
 
-        $blocks[] = ['h3', 'Model profile & internal link'];
+        $blocks[] = ['h2', ucwords($extras[2])];
+        $section3_p1 = sprintf(
+            'Writers compare %s to a shoreline stroll, explaining how the slower cadence invites fans to trace each motion with their fingertips resting lightly on their lap. As the description unfolds %s keeps her shoulders low and gaze steady, giving the audience plenty of time to feel each inhale before the next turn. Observers are urged to follow the arc of her palms and to breathe in sync with the gentle count laid out in the guide.',
+            $extras[2],
+            $focus
+        );
+        $section3_p2 = 'Additional guidance explains how to stretch wrists gently while tracing the circular motions on screen, then to jot down a feeling or color that surfaces before the next beat arrives. The aim is to make every watcher feel like the tempo is tailored to them, easing anxious energy and replacing it with a soft hum.';
+        $blocks[] = ['p', $section3_p1];
+        $blocks[] = ['p', $section3_p2];
+
+        $blocks[] = ['h2', ucwords($extras[3])];
+        $section4_p1 = sprintf(
+            'Coaches portray %s as the moment when time stretches, advising viewers to dim their room lights slightly and settle their palms on their knees so they can feel each breath glide through the chest.',
+            $extras[3]
+        );
+        $section4_p2 = sprintf(
+            'When %s rises again, %s draws her chin toward her collarbone, lets a smile bloom slowly, and invites the audience to mirror that patience before switching to live chat. Fans are reminded to sip water, roll their wrists, and savor the glow that stays in the room after the final twirl.',
+            $extras[3],
+            $focus
+        );
+        $blocks[] = ['p', $section4_p1];
+        $blocks[] = ['p', $section4_p2];
+
+        $blocks[] = ['h3', 'Internal link'];
         $model_url = !empty($c['model_url']) ? $c['model_url'] : '#';
-        $link_focus = $use_phrase('focus', $focus);
-        $link_extra = $use_phrase('extra_0', $extras[0]);
-        $blocks[] = ['raw', sprintf('<p>Visit the dedicated profile for <a href="%s">%s</a> to gather behind-the-scenes notes on %s and refreshed looks at %s clips, then bookmark upcoming appearances that echo this pacing guide.</p>', esc_url($model_url), esc_html($name), esc_html($link_focus), esc_html($link_extra))];
+        $internal_link = sprintf(
+            'Keep following %s by visiting <a href="%s">%s</a>, where %s moments are archived with gentle notes for future watch parties.',
+            esc_html($focus),
+            esc_url($model_url),
+            esc_html($name),
+            esc_html($extras[1])
+        );
+        $blocks[] = ['raw', '<p class="internal-link">' . $internal_link . '</p>'];
 
-        $conclusion_heading = $use_phrase('focus', $focus);
-        $blocks[] = ['h2', sprintf('%s closing reflections', $conclusion_heading)];
-        $blocks[] = ['p', sprintf('The recap ties together how %s threads %s, %s, %s, and %s through a five-part structure that feels like a tour of the studio floor. Readers are reminded to sip water between chapters, keep volume at a gentle level, and jot down the timestamp where the laughter peaks before the chat window reopens.', $use_phrase('focus', $focus), $use_phrase('extra_0', $extras[0]), $use_phrase('extra_1', $extras[1]), $use_phrase('extra_2', $extras[2]), $use_phrase('extra_3', $extras[3]))];
-        $blocks[] = ['p', sprintf('Final notes encourage viewers to breathe along with the tempo changes, watch for the way %s softens her shoulders before spinning toward the crowd, and switch over to live interaction only after the closing bow fades.', $use_phrase('focus', $focus))];
-
-        $supplement_templates = [
-            'focus'   => 'A quick aside reminds viewers that %s steadies the atmosphere whenever nerves rise before the next cue.',
-            'extra_0' => 'Crew leads repeat that %s is the signal to relax shoulders and let the upbeat sway return.',
-            'extra_1' => 'Hosts mention that %s is the best moment to type gentle compliments without rushing.',
-            'extra_2' => 'Choreographers add that %s helps everyone feel the slower rhythm before the next swell.',
-            'extra_3' => 'Lighting techs whisper that %s brings the reflective shimmer back for one last wink.',
-        ];
-        foreach ($phrase_limits as $key => $limit) {
-            while ($phrase_counts[$key] < $limit['min'] && $phrase_counts[$key] < $limit['max']) {
-                $value = $use_phrase($key);
-                if ($value === '') {
-                    break;
-                }
-                $template = $supplement_templates[$key] ?? 'Additional guidance reminds viewers how %s keeps the momentum steady.';
-                $blocks[] = ['p', sprintf($template, $value)];
-            }
-        }
-
-        $content    = $this->html($blocks);
-        $word_count = str_word_count(strip_tags($content));
-        $padding    = [
-            'Production journals expand on how the stage manager counts down each lighting fade, encouraging viewers at home to dim lamps gradually so their spaces feel as calm as the studio.',
-            'Camera assistants describe wiping lenses between takes, checking that the jib wheels roll silently, and reminding fans to stretch wrists or sip water while the performer resets props.',
-            'A final behind-the-scenes vignette paints the green room, noting quiet affirmations from stylists, freshly steamed outfits on rolling racks, and the gentle hum of monitors waiting for the encore.',
-        ];
-        $added_padding = [];
-
-        foreach ($padding as $pad) {
-            if ($word_count >= 800) {
-                break;
-            }
-            $blocks[]  = ['p', $pad];
-            $added_padding[] = $pad;
-            $content   = $this->html($blocks);
-            $word_count = str_word_count(strip_tags($content));
-        }
-
-        while ($word_count > 1000 && !empty($added_padding)) {
-            $last_pad = array_pop($added_padding);
-            $last_block = array_pop($blocks);
-            if ($last_block[0] !== 'p' || $last_block[1] !== $last_pad) {
-                $blocks[] = $last_block;
-                break;
-            }
-            $content   = $this->html($blocks);
-            $word_count = str_word_count(strip_tags($content));
-        }
+        $blocks[] = ['h2', sprintf('Conclusion with %s', $focus)];
+        $blocks[] = ['p', 'The closing reflection reminds viewers to hold on to the calm pulse they cultivated during the session, to journal a few sensations before logging off, and to return whenever they crave another gentle storyline.'];
 
         $content = $this->html($blocks);
+        $word_count = str_word_count(strip_tags($content));
+        if ($word_count < 800 || $word_count > 1000) {
+            $content = $this->pad_word_count($content, $blocks, $word_count);
+        }
 
         return [
             'title'    => $title,
@@ -206,6 +133,25 @@ class VideoTemplate {
             'keywords' => $keywords,
             'content'  => $content,
         ];
+    }
+
+    protected function pad_word_count(string $content, array $blocks, int $word_count): string {
+        if ($word_count >= 800 && $word_count <= 1000) {
+            return $content;
+        }
+        $extras = [
+            'A reminder panel encourages viewers to stretch ankles, roll shoulders, and let the quiet hum of the soundtrack linger before pressing play again.',
+            'Another gentle sidebar suggests lighting a small candle or opening a window so the fresh air anchors the emotional pace of the story.',
+        ];
+        foreach ($extras as $extra) {
+            if ($word_count >= 800) {
+                break;
+            }
+            $blocks[] = ['p', $extra];
+            $content   = $this->html($blocks);
+            $word_count = str_word_count(strip_tags($content));
+        }
+        return $content;
     }
 
     /* helpers */
