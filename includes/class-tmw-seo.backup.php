@@ -410,19 +410,18 @@ class Core {
     }
     
     protected static function update_featured_image_meta(int $post_id, string $name): void {
-        $thumb_id = (int) get_post_thumbnail_id($post_id);
-        if (!$thumb_id) {
+        $post = get_post($post_id);
+        if (!$post instanceof \WP_Post) {
             return;
         }
-        $alt = trim($name . ' live chat');
-        update_post_meta($thumb_id, '_wp_attachment_image_alt', $alt);
-        $attachment = [
-            'ID' => $thumb_id,
-            'post_title' => sanitize_text_field($name . ' — Featured'),
-            'post_excerpt' => sanitize_text_field($name . ' — Featured image for Top Models Webcam'),
-            'post_content' => sanitize_textarea_field($name . ' — Social/OG thumbnail'),
-        ];
-        wp_update_post($attachment);
+
+        $thumb_id = (int) get_post_thumbnail_id($post_id);
+        if ($thumb_id <= 0) {
+            return;
+        }
+
+        // Legacy direct updates superseded by TMW_SEO\Image_Meta + Media\Image_Meta_Generator.
+        \TMW_SEO\Media\Image_Meta_Generator::generate_for_featured_image($thumb_id, $post);
     }
 
     protected static function deep_link_url(string $type): string {
