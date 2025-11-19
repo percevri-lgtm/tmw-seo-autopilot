@@ -56,6 +56,7 @@ class VideoTemplate {
             $focus,
             $extras[1]
         );
+        $intro_two .= sprintf(' Preview whispers already point toward %s gliding into a reflective segment, giving fans a hint of the calm choreography to come.', $extras[2]);
 
         $blocks[] = ['p', $intro_one];
         $blocks[] = ['p', $intro_two];
@@ -70,7 +71,9 @@ class VideoTemplate {
             $extras[0]
         );
         $section1_p2 = 'Commentators linger on the way the opening segment stretches time, noting how gentle gestures encourage viewers to hum along quietly in their living rooms. Tips suggest holding a favorite cushion, noticing the texture, and letting those sensations tie them to the unfolding scene. A reminder to dim overhead lights and rely on small lamps helps keep the atmosphere tender and unrushed.';
+        $section1_p2 .= sprintf(' Storytellers highlight how %s keeps that softness anchored, making the early minutes feel like a familiar companion guiding the room.', $extras[0]);
         $section1_p3 = 'By the end of the section, watchers feel like they have been carried through a calm dance, thanks to steady pacing and heartfelt chat prompts that ask for single-word reflections. Observers jot those words in a notebook so they can revisit the feelings later, reinforcing the sense of communal mindfulness.';
+        $section1_p3 .= sprintf(' Gentle callbacks to %s remind them that the relaxed current can be summoned whenever they replay the highlight reel.', $extras[0]);
         $blocks[] = ['p', $section1_p1];
         $blocks[] = ['p', $section1_p2];
         $blocks[] = ['p', $section1_p3];
@@ -84,7 +87,9 @@ class VideoTemplate {
             'Moderators explain that %s reacts to each message with deliberate pauses, tilting their head and letting a thoughtful grin grow before the next topic. This pacing teaches fans to value silence as much as conversation, making every response feel personal. The guidance encourages everyone to leave a beat of quiet after each compliment so the appreciation can truly land.',
             $focus
         );
+        $section2_p2 .= sprintf(' In doing so, the room senses how %s can keep a live exchange cheerful even when everyone chooses to type less and listen more.', $extras[1]);
         $section2_p3 = 'Attendees are coached to mirror that pace by counting heartbeats between their own comments, letting curiosity replace urgency so the discussion maintains a gentle sway.';
+        $section2_p3 .= sprintf(' That mindful rhythm makes %s feel like a shared promise to protect the cozy lounge vibe all night.', $extras[1]);
         $blocks[] = ['p', $section2_p1];
         $blocks[] = ['p', $section2_p2];
         $blocks[] = ['p', $section2_p3];
@@ -98,6 +103,7 @@ class VideoTemplate {
             'They describe how %s keeps movements unhurried so watchers can trace each motion with their fingertips resting lightly on their lap, turning the experience into a guided meditation. Slow arcs of the arms invite audiences to match their breathing to a soft four-count, reinforcing calm focus. Observers are nudged to picture silver moonlight skimming over calm water to deepen the immersive feeling.',
             $focus
         );
+        $section3_p2 .= sprintf(' Listeners whisper that %s turns every pause into a glimmering snapshot, making the leisurely pace feel intentional and artful.', $extras[2]);
         $section3_p3 = 'Writers encourage viewers to jot down a single word that captures how the segment made them feel, building a small journal of moods that can be revisited whenever calm is needed. That journal becomes a treasure map for future evenings, reminding them how easily serenity can return.';
         $blocks[] = ['p', $section3_p1];
         $blocks[] = ['p', $section3_p2];
@@ -105,7 +111,9 @@ class VideoTemplate {
 
         $blocks[] = ['h2', $extras[3]];
         $section4_p1 = 'Narrators portray the closing swell as the moment when time stretches, asking viewers to dim nearby lamps and let the hush of the room settle over their shoulders. They speak about the hush as a weighted blanket of comfort, inviting everyone to close their eyes for a heartbeat before lifting them to catch the next smile. Gentle reminders to keep phones facedown help protect the fragile mood.';
+        $section4_p1 .= sprintf(' Those final glimmers of %s give the finale a polished sheen, helping fans remember the warmth long after the last frame fades.', $extras[3]);
         $section4_p2 = 'Tips encourage fans to sip something warm, press their heels into the floor, and notice how their breathing steadies when they mirror the presenter\'s gentle posture. The scene is treated like a guided relaxation session, full of soft humming and quiet smiles from the chat.';
+        $section4_p2 .= sprintf(' Even the lighting cues lean into %s, with each soft angle accentuating the graceful goodbye.', $extras[3]);
         $section4_p3 = 'By treating the final stretch as a lullaby for the senses, the coverage shows how gratitude becomes the natural closing note, leaving the audience refreshed for the rest of the night. The final moments feel like a handwritten letter of thanks, gentle and sincere.';
         $blocks[] = ['p', $section4_p1];
         $blocks[] = ['p', $section4_p2];
