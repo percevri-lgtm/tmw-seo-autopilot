@@ -86,11 +86,10 @@ class Image_Meta_Generator {
         // Fallback if somehow the parent has no title yet.
         $base = $post_title ?: ucwords(str_replace(['-', '_'], ' ', $file_title));
 
-        // Keep everything PG-13.
+        // Keep everything PG-13 and non-explicit.
         $alt   = sprintf('%s – preview image on %s', $base, $site_name);
         $title = sprintf('%s – featured image', $base);
 
-        // Slightly different wording for videos vs models, but still safe.
         if ($parent_post->post_type === 'video') {
             $caption = sprintf(
                 'Preview thumbnail for the video “%s” on %s.',
@@ -111,7 +110,7 @@ class Image_Meta_Generator {
             );
             $description = sprintf(
                 'Automatic profile image description for %s on %s. '
-                . 'This picture represents the model on her main profile page and related listings.',
+                . 'This picture represents the model on the main profile page and in related listings.',
                 $base,
                 $site_name
             );

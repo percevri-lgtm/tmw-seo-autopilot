@@ -1,8 +1,6 @@
 <?php
 namespace TMW_SEO;
 
-use TMW_SEO\Media\Image_Meta_Generator;
-
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -84,7 +82,7 @@ class Media {
             return;
         }
 
-        Image_Meta_Generator::maybe_update_featured_image_meta($video->ID, $thumb_id);
+        // Thumbnail ALT/title/caption handled by TMW_SEO\Image_Meta + Media\Image_Meta_Generator.
 
         $url = wp_get_attachment_image_url($thumb_id, 'full');
         if ($url) {
