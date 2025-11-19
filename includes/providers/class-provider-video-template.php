@@ -62,75 +62,118 @@ class VideoTemplate {
         // ALT suggestion (apply to the featured image or hero still manually): $alt_suggestion
         // Removed static "Video Preview" box – real player is rendered separately.
 
+        $phrase_limits = [
+            'focus' => ['phrase' => $focus, 'min' => 6, 'max' => 12, 'fallback' => 'the performer'],
+        ];
+        $fallbacks = [
+            'extra_0' => 'this opening groove',
+            'extra_1' => 'this chat rehearsal',
+            'extra_2' => 'this pacing study',
+            'extra_3' => 'this reflective finale',
+        ];
+        foreach ($extras as $idx => $extra) {
+            $phrase_limits['extra_' . $idx] = [
+                'phrase'   => $extra,
+                'min'      => 3,
+                'max'      => 7,
+                'fallback' => $fallbacks['extra_' . $idx] ?? 'this segment',
+            ];
+        }
+        $phrase_counts = array_fill_keys(array_keys($phrase_limits), 0);
+
+        $use_phrase = function (string $key, string $fallback = '') use (&$phrase_counts, $phrase_limits) {
+            if (!isset($phrase_limits[$key])) {
+                return $fallback;
+            }
+            if ($fallback === '') {
+                $fallback = $phrase_limits[$key]['fallback'] ?? '';
+            }
+            if ($phrase_counts[$key] >= $phrase_limits[$key]['max']) {
+                return $fallback;
+            }
+            $phrase_counts[$key]++;
+            return $phrase_limits[$key]['phrase'];
+        };
+
+        $blocks   = [];
         $intro_one = sprintf(
-            '%s anchors this highlight page, and %s, %s, %s, and %s are introduced immediately so returning viewers understand the editorial plan. The intro frames the footage as a PG-13 walkthrough that respects soft pacing, uses director commentary to place each keyword inside the first beat, and invites fans to treat the article like a friendly guide before pressing play. Lighting plans, wardrobe notes, and countdown cues are summarized in natural language so RankMath registers relevance without sounding robotic.',
-            $focus,
-            $extras[0],
-            $extras[1],
-            $extras[2],
-            $extras[3]
+            '%s sets the tone for this viewing guide, weaving %s, %s, %s, and %s into a calm welcome that previews the moods ahead. The opening notes describe how she shifts from warm smiles to purposeful gestures, explain when the camera glides past the dressing mirror, and signal when viewers should take a breath before the first highlight cues roll in.',
+            $use_phrase('focus', $focus),
+            $use_phrase('extra_0', $extras[0]),
+            $use_phrase('extra_1', $extras[1]),
+            $use_phrase('extra_2', $extras[2]),
+            $use_phrase('extra_3', $extras[3])
         );
 
         $intro_two = sprintf(
-            'Because %s thrives on structured storytelling, the second opening paragraph explains how %s, %s, %s, and %s resurface later in captions, lower thirds, and chat prompts. It outlines when to look for audio cues, how the crew labels transitions, and why the first ten percent of the copy doubles as a calm orientation for viewers who want guidance before the player begins. Readers learn that the commentary is PG-13 yet detailed enough to inform lighting tweaks and viewer posture.',
-            $focus,
-            $extras[0],
-            $extras[1],
-            $extras[2],
-            $extras[3]
+            'Because %s treats each stream like a mini narrative, the second greeting paragraph sets expectations for chapter breaks, mentions when the crew dims the lamps, and cues watchers to note breathing exercises before transitions. It also highlights how the team shares respectful chat etiquette reminders so the experience stays PG-13 while still feeling spontaneous.',
+            $use_phrase('focus', $focus)
         );
 
-        $blocks   = [];
         $blocks[] = ['p', $intro_one];
         $blocks[] = ['p', $intro_two];
 
         foreach ($extras as $index => $extra) {
-            switch ($index) {
-                case 0:
-                    $section_paragraphs = [
-                        sprintf('Directors rely on a floating crane to show how %s sequences compliment %s during the first slow pan. Neutral backgrounds, supportive LED strips, and mild color grading keep the PG-13 promise while still spotlighting the signature style fans expect. These cues make %s coverage feel curated rather than improvised, and watchers know exactly when the conversation shifts toward wardrobe tips.', $extra, $focus, $extra),
-                        sprintf('Editors describe how %s transitions into %s prompts without forcing camera operators to rush focus pulls. The pacing chart labels every pause, reminding viewers to breathe, stretch, and keep the player in full screen so %s observations about hair texture and camera balance feel intimate yet respectful.', $extra, $extras[1], $extra),
-                    ];
-                    break;
-                case 1:
-                    $section_paragraphs = [
-                        sprintf('%s appears whenever the host shifts into live chat rehearsal, and %s guides the tone with a steady, welcoming cadence. Producers map out countdown clocks, note-taking ideas, and emoji suggestions so the PG-13 mood stays intact while watchers learn how to interact politely, keeping %s mentions natural.', $extra, $focus, $extra),
-                        sprintf('Crew notes explain that %s cues are tied to soft chimes in the soundtrack, making it easy to recognize when to open the chat window. The article advises saving favorite lines, practicing posture, and echoing the compliments that %s uses before leaning into the %s finale, ensuring %s cues remain friendly.', $extra, $focus, $extras[3], $extra),
-                    ];
-                    break;
-                case 2:
-                    $section_paragraphs = [
-                        sprintf('Editors slow the pacing whenever %s moments take over, allowing %s to narrate how the choreography links to each camera cue. The writing highlights transitions, tempo changes, and how the crew keeps the PG-13 promise by emphasizing balance, breath control, and upbeat expressions that make %s sequences memorable.', $extra, $focus, $extra),
-                        sprintf('Viewers are encouraged to jot down timestamps where %s slides into softer movements before the soundtrack crescendos again. Tips mention stretching, mirroring easy shoulder rolls, and recognizing when %s re-centers the frame so %s segments never feel rushed.', $extra, $focus, $extra),
-                    ];
-                    break;
-                default:
-                    $section_paragraphs = [
-                        sprintf('%s coverage focuses on lighting, wardrobe harmony, and the way %s experiments with reflective props without breaking the PG-13 boundary. Detailed descriptions explain how gels, diffusers, and wide primes create the shimmer that fans associate with %s moments.', $extra, $focus, $extra),
-                        sprintf('Producers share notes on when %s close-ups transition into wide shots that include %s supporting players. Readers learn how to adjust screen brightness, when to capture screenshots for inspiration, and how %s storytelling blends glamor with calm pacing.', $extra, $extras[2], $extra),
-                    ];
-                    break;
-            }
-
-            $blocks[] = ['h2', sprintf('%s perspective & tips', $extra), ['id' => 'keyword-' . ($index + 1)]];
-            foreach ($section_paragraphs as $paragraph) {
-                $blocks[] = ['p', $paragraph];
+            if ($index === 0) {
+                $heading_phrase = $use_phrase('extra_0', $extra);
+                $blocks[] = ['h2', sprintf('%s framing tips', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
+                $blocks[] = ['p', sprintf('Stage managers describe how %s draws strength from %s by pairing long glides with steady smiles and relaxed shoulders. Overhead lanterns are feathered toward the floor, giving space for soft shadows while the host references journal notes about breathing rhythm and eye contact.', $use_phrase('focus', $focus), $use_phrase('extra_0', $extra))];
+                $blocks[] = ['p', sprintf('During the first chorus the writing points out that %s becomes a cue for viewers to sit taller and track the gentle sway of the camera crane. The article encourages fans to notice fingertip placement on the mic stand, appreciate the controlled pace, and mirror the slow inhales before the tempo shifts.', $use_phrase('extra_0', $extra))];
+            } elseif ($index === 1) {
+                $heading_phrase = $use_phrase('extra_1', $extra);
+                $blocks[] = ['h2', sprintf('%s hosting cues', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
+                $blocks[] = ['p', sprintf('Writers explain how %s invites the room to settle into %s segments where the host leans toward the lens and practices gentle call-and-response prompts. Lighting dims to a honey color, and crew members tap cue cards that remind everyone to smile between each spoken line.', $use_phrase('focus', $focus), $use_phrase('extra_1', $extra))];
+                $blocks[] = ['p', sprintf('The breakdown shows viewers how %s moments include soft wrist rolls, reassuring nods, and a pause that lets supportive comments surface in the live window. Fans are reminded to keep fingertips relaxed on the keyboard and to note how the host circles back to compassionate humor before moving on.', $use_phrase('extra_1', $extra))];
+            } elseif ($index === 2) {
+                $heading_phrase = $use_phrase('extra_2', $extra);
+                $blocks[] = ['h2', sprintf('%s pacing study', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
+                $blocks[] = ['p', sprintf('Cinematographers linger on each beat whenever %s takes over, allowing %s to describe the choreography in a reflective tone. The script details how the dolly operator counts to five on every push, how the wardrobe shimmer catches low angles, and how the performer keeps expressions bright even while moving slowly.', $use_phrase('extra_2', $extra), $use_phrase('focus', $focus))];
+                $blocks[] = ['p', sprintf('Viewers are urged to stretch their shoulders as %s sections build, keeping the spine tall and noticing how ambient synth notes rise and fall. Notes remind everyone that the host quietly adjusts bracelets and posture to match the groove, which helps the segment feel more intimate without breaking the PG-13 promise.', $use_phrase('extra_2', $extra))];
+            } else {
+                $heading_phrase = $use_phrase('extra_3', $extra);
+                $blocks[] = ['h2', sprintf('%s lightplay notes', $heading_phrase), ['id' => 'segment-' . ($index + 1)]];
+                $blocks[] = ['p', sprintf('Crew journals describe how %s is presented with reflective props, letting %s experiment with glints of light that skate across the stage floor. Wide primes capture glittering curtains while assistants adjust dimmers in slow increments so nothing feels rushed.', $use_phrase('extra_3', $extra), $use_phrase('focus', $focus))];
+                $blocks[] = ['p', sprintf('When %s returns later in the set, the article recommends lowering room lights at home and leaning closer to the screen to watch the mirrored movements. It points out how the host rests a palm on the railing, takes a deliberate pause, and then turns toward the audience with a calm grin that anchors the final minutes.', $use_phrase('extra_3', $extra))];
             }
         }
 
+        $blocks[] = ['p', 'Between segments, stagehands tidy cables, wipe mirrors, and pass along warm tea so the performer can keep posture relaxed. The guide suggests viewers stretch wrists, adjust chair height, and mimic the gentle breathing pattern described by the crew to keep their own living rooms aligned with the calm studio cadence.'];
+
         $blocks[] = ['h3', 'Model profile & internal link'];
         $model_url = !empty($c['model_url']) ? $c['model_url'] : '#';
-        $blocks[] = ['raw', sprintf('<p>Visit the dedicated profile for <a href="%s">%s</a> to gather deeper notes on %s plus refreshed looks at %s and %s shots, then bookmark upcoming appearances that sync with this video plan.</p>', esc_url($model_url), esc_html($name), esc_html($focus), esc_html($extras[0]), esc_html($extras[1]))];
+        $link_focus = $use_phrase('focus', $focus);
+        $link_extra = $use_phrase('extra_0', $extras[0]);
+        $blocks[] = ['raw', sprintf('<p>Visit the dedicated profile for <a href="%s">%s</a> to gather behind-the-scenes notes on %s and refreshed looks at %s clips, then bookmark upcoming appearances that echo this pacing guide.</p>', esc_url($model_url), esc_html($name), esc_html($link_focus), esc_html($link_extra))];
 
-        $blocks[] = ['h2', sprintf('%s conclusion & next cues', $focus)];
-        $blocks[] = ['p', sprintf('The closing recap reiterates how %s keeps %s, %s, %s, and %s aligned inside a seven-part highlight arc. Viewers are encouraged to replay slow pans, over-the-shoulder reveals, and diffused lighting tests so each cue feels familiar before diving into live interaction.', $focus, $extras[0], $extras[1], $extras[2], $extras[3])];
-        $blocks[] = ['p', sprintf('Editors leave gentle reminders so anyone following %s knows when %s, %s, and %s reappear as supporting moods. The guidance reinforces soft transitions, calibrates color temperature notes, and highlights the internal link for fans who want deeper %s lore before the next upload.', $focus, $extras[0], $extras[1], $extras[2], $extras[3])];
+        $conclusion_heading = $use_phrase('focus', $focus);
+        $blocks[] = ['h2', sprintf('%s closing reflections', $conclusion_heading)];
+        $blocks[] = ['p', sprintf('The recap ties together how %s threads %s, %s, %s, and %s through a five-part structure that feels like a tour of the studio floor. Readers are reminded to sip water between chapters, keep volume at a gentle level, and jot down the timestamp where the laughter peaks before the chat window reopens.', $use_phrase('focus', $focus), $use_phrase('extra_0', $extras[0]), $use_phrase('extra_1', $extras[1]), $use_phrase('extra_2', $extras[2]), $use_phrase('extra_3', $extras[3]))];
+        $blocks[] = ['p', sprintf('Final notes encourage viewers to breathe along with the tempo changes, watch for the way %s softens her shoulders before spinning toward the crowd, and switch over to live interaction only after the closing bow fades.', $use_phrase('focus', $focus))];
+
+        $supplement_templates = [
+            'focus'   => 'A quick aside reminds viewers that %s steadies the atmosphere whenever nerves rise before the next cue.',
+            'extra_0' => 'Crew leads repeat that %s is the signal to relax shoulders and let the upbeat sway return.',
+            'extra_1' => 'Hosts mention that %s is the best moment to type gentle compliments without rushing.',
+            'extra_2' => 'Choreographers add that %s helps everyone feel the slower rhythm before the next swell.',
+            'extra_3' => 'Lighting techs whisper that %s brings the reflective shimmer back for one last wink.',
+        ];
+        foreach ($phrase_limits as $key => $limit) {
+            while ($phrase_counts[$key] < $limit['min'] && $phrase_counts[$key] < $limit['max']) {
+                $value = $use_phrase($key);
+                if ($value === '') {
+                    break;
+                }
+                $template = $supplement_templates[$key] ?? 'Additional guidance reminds viewers how %s keeps the momentum steady.';
+                $blocks[] = ['p', sprintf($template, $value)];
+            }
+        }
 
         $content    = $this->html($blocks);
         $word_count = str_word_count(strip_tags($content));
         $padding    = [
-            sprintf('Behind-the-scenes commentary explains how %s collaborates with %s and %s to keep the pacing steady, why the jib operator holds each glide for at least five seconds, and how the lighting board saves presets so the PG-13 tone never slips. This reflective passage keeps keywords conversational while ensuring the narrative feels like a real director talking shop.', $focus, $extras[0], $extras[1]),
-            sprintf('An additional set of viewer tips reminds audiences to listen for the subtle cue where %s signals a switch into %s and %s territory, noting that the script always circles back to %s for continuity. The combination of camera angles, emotional beats, and keyword-friendly narration satisfies both human readers and RankMath scoring.', $focus, $extras[2], $extras[3], $focus),
+            'Production journals expand on how the stage manager counts down each lighting fade, encouraging viewers at home to dim lamps gradually so their spaces feel as calm as the studio.',
+            'Camera assistants describe wiping lenses between takes, checking that the jib wheels roll silently, and reminding fans to stretch wrists or sip water while the performer resets props.',
+            'A final behind-the-scenes vignette paints the green room, noting quiet affirmations from stylists, freshly steamed outfits on rolling racks, and the gentle hum of monitors waiting for the encore.',
         ];
         $added_padding = [];
 
