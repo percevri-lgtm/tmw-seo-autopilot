@@ -143,9 +143,15 @@ class Image_Meta {
             return;
         }
 
-        if (defined('TMW_DEBUG') && TMW_DEBUG) {
-            error_log('[TMW-IMAGE] generating meta from ' . $source . " for post {$parent_post->ID} / attachment {$attachment_id}");
-        }
+        tmw_seo_debug(
+            sprintf(
+                'generating meta from %s for post %d / attachment %d',
+                $source,
+                $parent_post->ID,
+                $attachment_id
+            ),
+            'TMW-IMAGE'
+        );
 
         Image_Meta_Generator::generate_for_featured_image($attachment_id, $parent_post);
     }

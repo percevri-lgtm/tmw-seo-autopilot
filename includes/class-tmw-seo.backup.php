@@ -63,7 +63,14 @@ class Core {
 
         $name = self::detect_model_name_from_video($post);
         if (!$name) {
-            error_log(self::TAG . " abort: video#{$post->ID} '{$post->post_title}' has no detectable model name");
+            tmw_seo_debug(
+                sprintf(
+                    'abort: video#%d "%s" has no detectable model name',
+                    $post->ID,
+                    $post->post_title
+                ),
+                'TMW-SEO-GEN'
+            );
             return ['ok' => false, 'message' => 'No model name detected'];
         }
 
@@ -98,7 +105,10 @@ class Core {
         self::link_video_to_model($video_id, $model_id);
         self::link_model_to_video($model_id, $video_id);
 
-        error_log(self::TAG . " generated video#$video_id & model#$model_id for {$name}");
+        tmw_seo_debug(
+            sprintf('generated video#%d & model#%d for %s', $video_id, $model_id, $name),
+            'TMW-SEO-GEN'
+        );
         return ['ok' => true, 'video' => $payload_video, 'model' => $payload_model, 'model_id' => $model_id];
     }
 
@@ -154,7 +164,10 @@ class Core {
         }
         delete_post_meta($post_id, "_tmwseo_prev_{$type}");
         delete_post_meta($post_id, '_tmwseo_prev');
-        error_log(self::TAG . " rollback done for #$post_id");
+        tmw_seo_debug(
+            sprintf('rollback done for #%d', $post_id),
+            'TMW-SEO-GEN'
+        );
         return ['ok' => true];
     }
 
@@ -170,7 +183,10 @@ class Core {
             'post_title' => $name,
             'post_content' => '',
         ]);
-        error_log(self::TAG . " created model#$id for {$name}");
+        tmw_seo_debug(
+            sprintf('created model#%d for %s', $id, $name),
+            'TMW-SEO-GEN'
+        );
         return (int) $id;
     }
 
@@ -206,7 +222,10 @@ class Core {
         if (preg_match('/\b([A-Z][\p{L}\']+\s+[A-Z][\p{L}\']+)\b/u', $t, $m2)) {
             return trim($m2[1]);
         }
-        error_log(self::TAG . " abort: no model name for video#{$post->ID} title='{$t}'");
+        tmw_seo_debug(
+            sprintf('abort: no model name for video#%d title="%s"', $post->ID, $t),
+            'TMW-SEO-GEN'
+        );
         return '';
     }
 
@@ -488,7 +507,15 @@ class Core {
          update_post_meta($post_id, 'rank_math_title', $rm['title']);
         update_post_meta($post_id, 'rank_math_description', $rm['desc']);
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
-        error_log(self::TAG . " [RM] set focus='" . $rm['focus'] . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
+        tmw_seo_debug(
+            sprintf(
+                '[RM] set focus="%s" extras=%s for post#%d',
+                $rm['focus'],
+                json_encode($rm['extras']),
+                $post_id
+            ),
+            'TMW-SEO-GEN'
+        );
     }
 
     /** Cross-links */

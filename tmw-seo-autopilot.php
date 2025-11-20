@@ -8,6 +8,37 @@
  */
 if (!defined('ABSPATH')) exit;
 
+// Safe debug flag – OFF by default.
+if (!defined('TMW_DEBUG')) {
+    define('TMW_DEBUG', false);
+}
+
+/**
+ * Safe debug logger for TMW SEO.
+ *
+ * Usage: tmw_seo_debug('message'); or tmw_seo_debug(['data' => $var]);
+ */
+if (!function_exists('tmw_seo_debug')) {
+    function tmw_seo_debug($message, string $channel = 'TMW-SEO') {
+        // Only log when TMW_DEBUG is explicitly enabled.
+        if (!defined('TMW_DEBUG') || !TMW_DEBUG) {
+            return;
+        }
+
+        // Don’t log anything if WP_DEBUG_LOG is disabled.
+        if (!defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
+            return;
+        }
+
+        if (is_array($message) || is_object($message)) {
+            $message = print_r($message, true);
+        }
+
+        $prefix = sprintf('[%s] ', $channel);
+        error_log($prefix . $message);
+    }
+}
+
 define('TMW_SEO_PATH', plugin_dir_path(__FILE__));
 define('TMW_SEO_URL', plugin_dir_url(__FILE__));
 define('TMW_SEO_TAG', '[TMW-SEO]');
@@ -34,5 +65,5 @@ add_action('plugins_loaded', function () {
 });
 
 register_activation_hook(__FILE__, function () {
-    error_log(TMW_SEO_TAG . ' activated v1.0.0');
+    tmw_seo_debug('activated v1.0.0', 'TMW-SEO');
 });

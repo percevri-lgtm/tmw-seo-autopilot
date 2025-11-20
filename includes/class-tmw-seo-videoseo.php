@@ -82,17 +82,15 @@ class VideoSEO {
         $tag_keywords = Core::get_safe_model_tag_keywords($raw_tags);
         update_post_meta($post_id, '_tmwseo_video_tag_keywords', $tag_keywords);
 
-        if (defined('TMW_DEBUG') && TMW_DEBUG) {
-            error_log(
-                sprintf(
-                    '%s [RM-VIDEO] post#%d focus="%s" title="%s" desc_contains_focus=%s',
-                    Core::TAG,
-                    $post_id,
-                    $rm['focus'],
-                    $rm['title'],
-                    strpos( $rm['desc'], $rm['focus'] ) !== false ? 'yes' : 'no'
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf(
+                '[RM-VIDEO] post#%d focus="%s" title="%s" desc_contains_focus=%s',
+                $post_id,
+                $rm['focus'],
+                $rm['title'],
+                strpos( $rm['desc'], $rm['focus'] ) !== false ? 'yes' : 'no'
+            ),
+            'TMW-SEO-GEN'
+        );
     }
 }

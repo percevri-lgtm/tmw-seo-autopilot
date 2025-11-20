@@ -70,21 +70,26 @@ class Core {
             return ['ok' => false, 'message' => 'Skipped: focus keyword already set.'];
         }
 
-        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
-            error_log(
-                sprintf(
-                    '%s [RM-VIDEO] post#%d opts=%s existing_focus=%s',
-                    self::TAG,
-                    $video_id,
-                    wp_json_encode( $args ),
-                    $existing_focus !== '' ? 'yes' : 'no'
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf(
+                '[RM-VIDEO] post#%d opts=%s existing_focus=%s',
+                $video_id,
+                wp_json_encode( $args ),
+                $existing_focus !== '' ? 'yes' : 'no'
+            ),
+            'TMW-SEO-GEN'
+        );
 
         $name = self::detect_model_name_from_video($post);
         if (!$name) {
-            error_log(self::TAG . " abort: video#{$post->ID} '{$post->post_title}' has no detectable model name");
+            tmw_seo_debug(
+                sprintf(
+                    'abort: video#%d "%s" has no detectable model name',
+                    $post->ID,
+                    $post->post_title
+                ),
+                'TMW-SEO-GEN'
+            );
             return ['ok' => false, 'message' => 'No model name detected'];
         }
 
@@ -134,37 +139,36 @@ class Core {
         $tag_keywords  = self::safe_model_tag_keywords( $looks );
         update_post_meta( $post->ID, '_tmwseo_video_tag_keywords', $tag_keywords );
 
-        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
-            error_log(
-                sprintf(
-                    '%s [RM-VIDEO] post#%d focus="%s" extras=%s',
-                    self::TAG,
-                    $post->ID,
-                    $rm_video['focus'],
-                    wp_json_encode( $rm_video['extras'] ?? [] )
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf(
+                '[RM-VIDEO] post#%d focus="%s" extras=%s',
+                $post->ID,
+                $rm_video['focus'],
+                wp_json_encode( $rm_video['extras'] ?? [] )
+            ),
+            'TMW-SEO-GEN'
+        );
 
         self::update_rankmath_meta($model_id, $rm_model);
 
         self::link_video_to_model($video_id, $model_id);
         self::link_model_to_video($model_id, $video_id);
 
-        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
-            error_log(
-                sprintf(
-                    '%s [VIDEO] #%d focus="%s" title="%s" desc_contains_focus=%s',
-                    self::TAG,
-                    $post->ID,
-                    $rm_video['focus'],
-                    $rm_video['title'],
-                    strpos( $rm_video['desc'], $rm_video['focus'] ) !== false ? 'yes' : 'no'
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf(
+                '[VIDEO] #%d focus="%s" title="%s" desc_contains_focus=%s',
+                $post->ID,
+                $rm_video['focus'],
+                $rm_video['title'],
+                strpos( $rm_video['desc'], $rm_video['focus'] ) !== false ? 'yes' : 'no'
+            ),
+            'TMW-SEO-GEN'
+        );
 
-        error_log(self::TAG . " generated video#$video_id & model#$model_id for {$name}");
+        tmw_seo_debug(
+            sprintf('generated video#%d & model#%d for %s', $video_id, $model_id, $name),
+            'TMW-SEO-GEN'
+        );
         return ['ok' => true, 'video' => $payload_video, 'model' => $payload_model, 'model_id' => $model_id];
     }
 
@@ -222,7 +226,10 @@ class Core {
         }
         delete_post_meta($post_id, "_tmwseo_prev_{$type}");
         delete_post_meta($post_id, '_tmwseo_prev');
-        error_log(self::TAG . " rollback done for #$post_id");
+        tmw_seo_debug(
+            sprintf('rollback done for #%d', $post_id),
+            'TMW-SEO-GEN'
+        );
         return ['ok' => true];
     }
 
@@ -238,7 +245,10 @@ class Core {
             'post_title' => $name,
             'post_content' => '',
         ]);
-        error_log(self::TAG . " created model#$id for {$name}");
+        tmw_seo_debug(
+            sprintf('created model#%d for %s', $id, $name),
+            'TMW-SEO-GEN'
+        );
         return (int) $id;
     }
 
@@ -274,7 +284,10 @@ class Core {
         if (preg_match('/\b([A-Z][\p{L}\']+\s+[A-Z][\p{L}\']+)\b/u', $t, $m2)) {
             return trim($m2[1]);
         }
-        error_log(self::TAG . " abort: no model name for video#{$post->ID} title='{$t}'");
+        tmw_seo_debug(
+            sprintf('abort: no model name for video#%d title="%s"', $post->ID, $t),
+            'TMW-SEO-GEN'
+        );
         return '';
     }
 
@@ -777,8 +790,26 @@ class Core {
             $name
         );
 
-        error_log(self::TAG . " [MODEL-EXTRAS] post#{$post->ID} looks=" . json_encode($looks) . " tag_kw=" . json_encode($tag_keywords) . " generic=" . json_encode($generic) . " extras=" . json_encode($extras));
-        error_log(self::TAG . " [RM-MODEL] focus='{$focus}' extras=" . json_encode($extras) . " for post#{$post->ID}");
+        tmw_seo_debug(
+            sprintf(
+                '[MODEL-EXTRAS] post#%d looks=%s tag_kw=%s generic=%s extras=%s',
+                $post->ID,
+                json_encode($looks),
+                json_encode($tag_keywords),
+                json_encode($generic),
+                json_encode($extras)
+            ),
+            'TMW-SEO-GEN'
+        );
+        tmw_seo_debug(
+            sprintf(
+                '[RM-MODEL] focus="%s" extras=%s for post#%d',
+                $focus,
+                json_encode($extras),
+                $post->ID
+            ),
+            'TMW-SEO-GEN'
+        );
 
         return [
             'focus' => $focus,
@@ -814,7 +845,15 @@ class Core {
 
         update_post_meta($post_id, 'rank_math_pillar_content', 'on');
         $focus_for_log = $preserve_focus && $existing_focus !== '' ? $existing_focus : $rm['focus'];
-        error_log(self::TAG . " [RM] set focus='" . $focus_for_log . "' extras=" . json_encode($rm['extras']) . " for post#$post_id");
+        tmw_seo_debug(
+            sprintf(
+                '[RM] set focus="%s" extras=%s for post#%d',
+                $focus_for_log,
+                json_encode($rm['extras']),
+                $post_id
+            ),
+            'TMW-SEO-GEN'
+        );
     }
 
     protected static function is_old_video_title(string $title, string $focus): bool {
@@ -898,19 +937,17 @@ class Core {
             );
         }
 
-        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
-            error_log(
-                sprintf(
-                    '%s [VIDEO-H1] #%d type=%s old="%s" new="%s" focus="%s"',
-                    self::TAG,
-                    $post_id,
-                    $post->post_type,
-                    $post->post_title,
-                    $new_title,
-                    $focus
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf(
+                '[VIDEO-H1] #%d type=%s old="%s" new="%s" focus="%s"',
+                $post_id,
+                $post->post_type,
+                $post->post_title,
+                $new_title,
+                $focus
+            ),
+            'TMW-SEO-GEN'
+        );
     }
 
     public static function maybe_update_video_slug( \WP_Post $post, string $focus ): void {
