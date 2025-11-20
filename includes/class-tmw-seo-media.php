@@ -153,7 +153,7 @@ class Media {
         }
     }
 
-    private static function supports_post_type(string $post_type): bool {
+    public static function supports_post_type(string $post_type): bool {
         return in_array($post_type, array_merge([Core::MODEL_PT], Core::video_post_types()), true);
     }
 }
