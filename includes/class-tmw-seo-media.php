@@ -54,7 +54,10 @@ class Media {
             }
         }
 
-        error_log(self::TAG . " set_post_thumbnail post#$post_id thumb#$thumb_id");
+        tmw_seo_debug(
+            sprintf('set_post_thumbnail post#%d thumb#%d', $post_id, $thumb_id),
+            'TMW-SEO-MEDIA'
+        );
     }
 
     /**
@@ -148,9 +151,10 @@ class Media {
             }
         }
 
-        if (defined('TMW_DEBUG') && TMW_DEBUG) {
-            error_log(self::TAG . " filled thumbnail meta for post {$parent_post->ID} / attachment {$thumb_id}");
-        }
+        tmw_seo_debug(
+            sprintf('filled thumbnail meta for post %d / attachment %d', $parent_post->ID, $thumb_id),
+            'TMW-SEO-MEDIA'
+        );
     }
 
     public static function supports_post_type(string $post_type): bool {

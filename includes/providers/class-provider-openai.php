@@ -122,7 +122,10 @@ class OpenAI {
         ]);
 
         if (is_wp_error($res)) {
-            error_log('[TMW-SEO-GEN] OpenAI error: ' . $res->get_error_message());
+            tmw_seo_debug(
+                'OpenAI error: ' . $res->get_error_message(),
+                'TMW-SEO-GEN'
+            );
             return [];
         }
 

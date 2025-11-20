@@ -37,7 +37,15 @@ class Automations {
         }
 
         $res = Core::generate_for_video($post_ID, ['strategy'=>'template']);
-        error_log(self::TAG." {$source} video#{$post_ID} => ".json_encode($res));
+        tmw_seo_debug(
+            sprintf(
+                '%s video#%d => %s',
+                $source,
+                $post_ID,
+                json_encode($res)
+            ),
+            'TMW-SEO-AUTO'
+        );
         if (is_admin()) {
             $msg = $res['ok'] ? 'Generated SEO & content' : 'Skipped: '.$res['message'];
             update_post_meta($post_ID, '_tmwseo_last_message', $msg);

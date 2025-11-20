@@ -193,14 +193,10 @@ class Admin {
         if (!$post_id || !current_user_can('edit_post', $post_id)) wp_die('No permission');
         check_admin_referer('tmwseo_generate_now_' . $post_id);
 
-        if ( defined( 'TMW_DEBUG' ) && TMW_DEBUG ) {
-            error_log(
-                sprintf(
-                    '[TMW-SEO-ADMIN] Manual video generate_now for post #%d',
-                    $post_id
-                )
-            );
-        }
+        tmw_seo_debug(
+            sprintf('[TMW-SEO-ADMIN] Manual video generate_now for post #%d', $post_id),
+            'TMW-SEO-UI'
+        );
 
         $res = \TMW_SEO\Core::generate_for_video(
             $post_id,
