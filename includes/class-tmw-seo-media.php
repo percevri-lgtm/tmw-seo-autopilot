@@ -36,15 +36,24 @@ class Media {
 
     public static function on_set_thumb($post_id, $thumb_id, $meta = null) {
         $post = get_post($post_id);
-        if (!$post instanceof \WP_Post || $post->post_type !== Core::VIDEO_PT) {
+        if (!$post instanceof \WP_Post) {
             return;
         }
-        self::fill_attachment_fields((int) $thumb_id, $post);
-        $url = wp_get_attachment_image_url($thumb_id, 'full');
-        if ($url) {
-            update_post_meta($post_id, 'rank_math_facebook_image', esc_url_raw($url));
-            update_post_meta($post_id, 'rank_math_twitter_image', esc_url_raw($url));
+
+        if (!self::supports_post_type($post->post_type)) {
+            return;
         }
+
+        self::fill_attachment_fields((int) $thumb_id, $post);
+
+        if (in_array($post->post_type, Core::video_post_types(), true)) {
+            $url = wp_get_attachment_image_url($thumb_id, 'full');
+            if ($url) {
+                update_post_meta($post_id, 'rank_math_facebook_image', esc_url_raw($url));
+                update_post_meta($post_id, 'rank_math_twitter_image', esc_url_raw($url));
+            }
+        }
+
         error_log(self::TAG . " set_post_thumbnail post#$post_id thumb#$thumb_id");
     }
 
@@ -78,7 +87,7 @@ class Media {
         }
 
         // Avoid running on temporary auto-drafts.
-        if ($post->post_status === 'auto-draft') {
+        if ($post->post_status === 'auto-draft' || !self::supports_post_type($post->post_type)) {
             return;
         }
 
@@ -119,8 +128,8 @@ class Media {
         self::fill_attachment_fields($thumb_id, $post);
     }
 
-    private static function fill_attachment_fields(int $thumb_id, \WP_Post $video): void {
-        if (!$thumb_id || !$video instanceof \WP_Post || $video->post_type !== Core::VIDEO_PT) {
+    private static function fill_attachment_fields(int $thumb_id, \WP_Post $parent_post): void {
+        if (!$thumb_id || !$parent_post instanceof \WP_Post || !self::supports_post_type($parent_post->post_type)) {
             return;
         }
 
@@ -129,16 +138,22 @@ class Media {
             return;
         }
 
-        // Thumbnail ALT/title/caption handled by TMW_SEO\Image_Meta + Media\Image_Meta_Generator.
+        \TMW_SEO\Media\Image_Meta_Generator::generate_for_featured_image($thumb_id, $parent_post);
 
-        $url = wp_get_attachment_image_url($thumb_id, 'full');
-        if ($url) {
-            update_post_meta($video->ID, 'rank_math_facebook_image', esc_url_raw($url));
-            update_post_meta($video->ID, 'rank_math_twitter_image', esc_url_raw($url));
+        if (in_array($parent_post->post_type, Core::video_post_types(), true)) {
+            $url = wp_get_attachment_image_url($thumb_id, 'full');
+            if ($url) {
+                update_post_meta($parent_post->ID, 'rank_math_facebook_image', esc_url_raw($url));
+                update_post_meta($parent_post->ID, 'rank_math_twitter_image', esc_url_raw($url));
+            }
         }
 
         if (defined('TMW_DEBUG') && TMW_DEBUG) {
-            error_log(self::TAG . " filled thumbnail meta for video {$video->ID} / attachment {$thumb_id}");
+            error_log(self::TAG . " filled thumbnail meta for post {$parent_post->ID} / attachment {$thumb_id}");
         }
+    }
+
+    private static function supports_post_type(string $post_type): bool {
+        return in_array($post_type, array_merge([Core::MODEL_PT], Core::video_post_types()), true);
     }
 }
