@@ -31,16 +31,18 @@ class Image_Meta_Generator {
             return;
         }
 
-        // Do not run twice unless you manually clear the flag.
-        if (get_post_meta($attachment_id, '_tmw_image_meta_generated', true)) {
-            return;
-        }
+        $already_generated = (bool) get_post_meta($attachment_id, '_tmw_image_meta_generated', true);
 
         // Collect existing values so we never overwrite manual edits.
         $current_alt       = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
         $current_title     = $attachment->post_title;
         $current_caption   = $attachment->post_excerpt;
         $current_content   = $attachment->post_content;
+
+        // If we ran before and the user has kept any of the fields, keep respecting them.
+        if ($already_generated && ($current_alt || $current_title || $current_caption || $current_content)) {
+            return;
+        }
 
         $meta = self::build_meta_text($attachment, $parent_post);
 
