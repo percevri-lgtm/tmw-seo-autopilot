@@ -21,6 +21,13 @@ class Media {
     ];
 
     public static function boot() {
+        if (!is_admin()) {
+            return;
+        }
+
+        add_filter('attachment_fields_to_edit', [__CLASS__, 'attachment_fields_to_edit'], 20, 2);
+        add_filter('attachment_fields_to_save', [__CLASS__, 'attachment_fields_to_save'], 20, 2);
+
         add_action('set_post_thumbnail', [__CLASS__, 'on_set_thumb'], 10, 3);
         add_action('add_attachment', [__CLASS__, 'on_add_attachment']);
         add_action('save_post_' . Core::VIDEO_PT, [__CLASS__, 'on_save_video'], 10, 3);
@@ -45,8 +52,10 @@ class Media {
     }
 
     /**
-     * Ensure attachment fields are filled when _thumbnail_id is set/updated
-     * directly via post meta (e.g. importers that bypass set_post_thumbnail()).
+     * Ensure attachment fields are filled whenever _thumbnail_id is set/updated
+     * directly via post meta on ANY post type (models, videos, posts, pages, etc).
+     *
+     * This covers importers / plugins that bypass set_post_thumbnail().
      *
      * @param int    $meta_id
      * @param int    $object_id Post ID that owns the thumbnail.
@@ -54,12 +63,12 @@ class Media {
      * @param mixed  $meta_value Attachment ID stored in _thumbnail_id.
      */
     public static function on_thumb_meta($meta_id, $object_id, $meta_key, $meta_value) {
-        // We only care about the featured image meta.
+        // Only care about the featured image meta.
         if ($meta_key !== '_thumbnail_id') {
             return;
         }
 
-        $post_id = (int) $object_id;
+        $post_id  = (int) $object_id;
         $thumb_id = (int) $meta_value;
 
         if ($post_id <= 0 || $thumb_id <= 0) {
@@ -71,12 +80,13 @@ class Media {
             return;
         }
 
-        // Avoid running on temporary/auto-draft posts.
+        // Avoid running on temporary auto-drafts.
         if ($post->post_status === 'auto-draft') {
             return;
         }
 
-        // Re-use the existing logic to generate alt/title/caption/description.
+        // Re-use the existing logic that already knows how to build
+        // alt/title/caption/description from the parent post context.
         self::fill_attachment_fields($thumb_id, $post);
     }
 
