@@ -24,6 +24,10 @@ class Media {
         add_action('set_post_thumbnail', [__CLASS__, 'on_set_thumb'], 10, 3);
         add_action('add_attachment', [__CLASS__, 'on_add_attachment']);
         add_action('save_post_' . Core::VIDEO_PT, [__CLASS__, 'on_save_video'], 10, 3);
+
+        // Also react when _thumbnail_id meta is written directly.
+        add_action('added_post_meta', [__CLASS__, 'on_thumb_meta'], 10, 4);
+        add_action('updated_post_meta', [__CLASS__, 'on_thumb_meta'], 10, 4);
     }
 
     public static function on_set_thumb($post_id, $thumb_id, $meta = null) {
@@ -38,6 +42,42 @@ class Media {
             update_post_meta($post_id, 'rank_math_twitter_image', esc_url_raw($url));
         }
         error_log(self::TAG . " set_post_thumbnail post#$post_id thumb#$thumb_id");
+    }
+
+    /**
+     * Ensure attachment fields are filled when _thumbnail_id is set/updated
+     * directly via post meta (e.g. importers that bypass set_post_thumbnail()).
+     *
+     * @param int    $meta_id
+     * @param int    $object_id Post ID that owns the thumbnail.
+     * @param string $meta_key
+     * @param mixed  $meta_value Attachment ID stored in _thumbnail_id.
+     */
+    public static function on_thumb_meta($meta_id, $object_id, $meta_key, $meta_value) {
+        // We only care about the featured image meta.
+        if ($meta_key !== '_thumbnail_id') {
+            return;
+        }
+
+        $post_id = (int) $object_id;
+        $thumb_id = (int) $meta_value;
+
+        if ($post_id <= 0 || $thumb_id <= 0) {
+            return;
+        }
+
+        $post = get_post($post_id);
+        if (!$post instanceof \WP_Post) {
+            return;
+        }
+
+        // Avoid running on temporary/auto-draft posts.
+        if ($post->post_status === 'auto-draft') {
+            return;
+        }
+
+        // Re-use the existing logic to generate alt/title/caption/description.
+        self::fill_attachment_fields($thumb_id, $post);
     }
 
     public static function on_add_attachment($att_id) {
