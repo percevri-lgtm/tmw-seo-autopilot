@@ -25,9 +25,6 @@ class Media {
             return;
         }
 
-        add_filter('attachment_fields_to_edit', [__CLASS__, 'attachment_fields_to_edit'], 20, 2);
-        add_filter('attachment_fields_to_save', [__CLASS__, 'attachment_fields_to_save'], 20, 2);
-
         add_action('set_post_thumbnail', [__CLASS__, 'on_set_thumb'], 10, 3);
         add_action('add_attachment', [__CLASS__, 'on_add_attachment']);
         add_action('save_post_' . Core::VIDEO_PT, [__CLASS__, 'on_save_video'], 10, 3);
